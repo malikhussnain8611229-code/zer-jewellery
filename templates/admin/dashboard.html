@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<h1 class="admin-title">Dashboard</h1>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <i class="fas fa-users stat-icon"></i>
+    <p class="stat-label">Total Users</p>
+    <p class="stat-value">{{ users }}</p>
+  </div>
+  <div class="stat-card">
+    <i class="fas fa-gem stat-icon"></i>
+    <p class="stat-label">Products</p>
+    <p class="stat-value">{{ products }}</p>
+  </div>
+  <div class="stat-card">
+    <i class="fas fa-shopping-bag stat-icon"></i>
+    <p class="stat-label">Total Orders</p>
+    <p class="stat-value">{{ orders }}</p>
+  </div>
+  <div class="stat-card">
+    <i class="fas fa-coins stat-icon"></i>
+    <p class="stat-label">Revenue (PKR)</p>
+    <p class="stat-value">{{ "{:,.0f}".format(revenue) }}</p>
+  </div>
+</div>
+
+<h3 style="font-family:var(--font-serif);font-size:1.3rem;font-weight:300;margin-bottom:1.25rem">Recent Orders</h3>
+<table class="admin-table">
+  <thead>
+    <tr><th>ID</th><th>Customer</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th></tr>
+  </thead>
+  <tbody>
+    {% for order in recent_orders %}
+    <tr>
+      <td>#{{ order.id }}</td>
+      <td>{{ order.shipping_name }}</td>
+      <td>PKR {{ "{:,.0f}".format(order.total) }}</td>
+      <td>{{ order.payment_method }}</td>
+      <td><span class="order-status status-{{ order.status|lower }}">{{ order.status }}</span></td>
+      <td>{{ order.created_at.strftime('%d %b %Y') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

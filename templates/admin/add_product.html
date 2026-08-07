@@ -1,0 +1,75 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem">
+  <a href="{{ url_for('admin_products') }}" style="color:var(--warm-grey);text-decoration:none;font-size:0.85rem"><i class="fas fa-arrow-left"></i> Back</a>
+  <h1 class="admin-title" style="margin:0">{% if product %}Edit Product{% else %}Add Product{% endif %}</h1>
+</div>
+<form action="{% if product %}{{ url_for('admin_edit_product', id=product.id) }}{% else %}{{ url_for('admin_add_product') }}{% endif %}" method="post" style="max-width:700px">
+  <div class="form-grid" style="margin-bottom:1.25rem">
+    <div class="form-group full">
+      <label class="form-label">Product Name</label>
+      <input type="text" name="name" class="form-input" value="{{ product.name if product else '' }}" required>
+    </div>
+    <div class="form-group full">
+      <label class="form-label">Description</label>
+      <textarea name="description" class="form-input form-textarea" rows="4">{{ product.description if product else '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Price (PKR)</label>
+      <input type="number" name="price" class="form-input" value="{{ product.price if product else '' }}" required step="0.01">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Original Price (PKR, optional)</label>
+      <input type="number" name="original_price" class="form-input" value="{{ product.original_price if product and product.original_price else '' }}" step="0.01">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select name="category" class="form-input sort-select">
+        {% for cat in categories %}
+        <option value="{{ cat }}" {% if product and product.category==cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Stock Quantity</label>
+      <input type="number" name="stock" class="form-input" value="{{ product.stock if product else 10 }}" min="0">
+    </div>
+    <div class="form-group full">
+      <label class="form-label">Main Image URL</label>
+      <input type="text" name="image_url" class="form-input" value="{{ product.image_url if product else '' }}" placeholder="/static/images/photo1.jpg or https://...">
+    </div>
+    <div class="form-group full">
+      <label class="form-label">Image 2 URL (optional)</label>
+      <input type="text" name="image_url_2" class="form-input" value="{{ product.image_url_2 if product and product.image_url_2 else '' }}" placeholder="/static/images/photo2.jpg">
+    </div>
+    <div class="form-group full">
+      <label class="form-label">Image 3 URL (optional)</label>
+      <input type="text" name="image_url_3" class="form-input" value="{{ product.image_url_3 if product and product.image_url_3 else '' }}" placeholder="/static/images/photo3.jpg">
+    </div>
+    <div class="form-group full">
+      <label class="form-label">Image 4 URL (optional)</label>
+      <input type="text" name="image_url_4" class="form-input" value="{{ product.image_url_4 if product and product.image_url_4 else '' }}" placeholder="/static/images/photo4.jpg">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Material</label>
+      <input type="text" name="material" class="form-input" value="{{ product.material if product else '' }}" placeholder="e.g. 18K Gold, Diamond">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Weight</label>
+      <input type="text" name="weight" class="form-input" value="{{ product.weight if product else '' }}" placeholder="e.g. 8g">
+    </div>
+  </div>
+  <div style="display:flex;gap:2rem;margin-bottom:2rem">
+    <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;cursor:pointer">
+      <input type="checkbox" name="is_featured" {% if product and product.is_featured %}checked{% endif %}> Featured Product
+    </label>
+    <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;cursor:pointer">
+      <input type="checkbox" name="is_trending" {% if product and product.is_trending %}checked{% endif %}> Trending Product
+    </label>
+  </div>
+  <div style="display:flex;gap:1rem">
+    <button type="submit" class="btn btn-primary">{% if product %}Update Product{% else %}Add Product{% endif %}</button>
+    <a href="{{ url_for('admin_products') }}" class="btn btn-outline">Cancel</a>
+  </div>
+</form>
+{% endblock %}

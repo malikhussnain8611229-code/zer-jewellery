@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}ZÉR Jewellery — Where Elegance Begins{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <p class="hero-eyebrow">New Collection 2026</p>
+    <h1 class="hero-title">Wear<br>Your <em>Story</em></h1>
+    <p class="hero-sub">Handcrafted jewellery for the woman who speaks through her adornments. Rooted in tradition. Refined for now.</p>
+    <div class="hero-actions">
+      <a href="{{ url_for('shop') }}" class="btn btn-primary">Explore Collection</a>
+      <a href="{{ url_for('about') }}" class="btn btn-outline">Our Story</a>
+    </div>
+    <a href="#featured" class="hero-scroll"><span></span>Scroll to discover</a>
+  </div>
+  <div class="hero-right">
+    <div class="hero-image-wrap">
+      <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="ZÉR Jewellery">
+      <div class="hero-image-overlay"></div>
+    </div>
+    <div class="hero-logo-card">
+      <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="ZÉR">
+      <p>ZÉR Jewellery</p>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    {% for item in ['Handcrafted Gold','South Sea Pearls','Diamond Solitaires','Kundan Artistry','Bridal Collections','Timeless Elegance','Heirloom Pieces','Modern Luxury'] * 3 %}
+    <span class="marquee-item">{{ item }} <i class="fas fa-diamond"></i></span>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- FEATURED COLLECTIONS -->
+<section class="section" id="featured">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-eyebrow">Curated for You</p>
+      <h2 class="section-title">Featured <em>Pieces</em></h2>
+      <p class="section-desc">Each piece is a conversation between heritage and modernity — crafted for the woman who knows her worth.</p>
+    </div>
+    <div class="products-grid">
+      {% for product in featured %}
+      <div class="product-card reveal reveal-delay-{{ loop.index % 4 }}">
+        {% if product.original_price %}<span class="product-badge">Sale</span>{% endif %}
+        <a href="{{ url_for('product_detail', id=product.id) }}" class="product-img-wrap">
+          <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+        </a>
+        <div class="product-info">
+          <p class="product-category">{{ product.category }}</p>
+          <a href="{{ url_for('product_detail', id=product.id) }}" class="product-name">{{ product.name }}</a>
+          <div class="product-price-wrap">
+            <span class="product-price">PKR {{ "{:,.0f}".format(product.price) }}</span>
+            {% if product.original_price %}<span class="product-orig">PKR {{ "{:,.0f}".format(product.original_price) }}</span>{% endif %}
+          </div>
+          <div class="product-stars">★★★★★</div>
+          {% if product.stock > 0 %}
+          <div style="display:flex;gap:0.4rem;margin-top:0.75rem">
+            <form action="{{ url_for('add_to_cart', id=product.id) }}" method="post" style="flex:1">
+              <input type="hidden" name="qty" value="1">
+              <button type="submit" class="card-btn-dark">Add to Cart</button>
+            </form>
+            <button class="wishlist-btn {% if product.id in wishlist_ids %}active{% endif %}" data-product-id="{{ product.id }}" style="padding:0.55rem 0.75rem;background:var(--beige);color:var(--black);border:none;cursor:pointer;border-radius:2px;transition:all 0.2s;"><i class="fas fa-heart"></i></button>
+          </div>
+          <form action="{{ url_for('buy_now', id=product.id) }}" method="post" style="margin-top:0.4rem">
+            <input type="hidden" name="qty" value="1">
+            <button type="submit" class="card-btn-buynow">Buy Now <i class="fas fa-bolt"></i></button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="text-align:center;margin-top:3rem">
+      <a href="{{ url_for('shop') }}" class="btn btn-outline">View All Collections</a>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="section-sm" style="background:var(--ivory)">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-eyebrow">Browse by Category</p>
+      <h2 class="section-title">Shop by <em>Style</em></h2>
+    </div>
+    <div class="categories-grid reveal">
+      <div class="category-card" onclick="window.location='{{ url_for('shop', category='Earrings') }}'">
+        <img src="/static/images/EarringCategoryImage.jpeg" alt="Earrings" loading="lazy">
+        <div class="category-overlay"><div class="category-label"><span>Explore</span>Earrings</div></div>
+      </div>
+      <div class="category-card" onclick="window.location='{{ url_for('shop', category='Necklaces') }}'">
+        <img src="/static/images/n1b.jpeg" alt="Necklaces" loading="lazy">
+        <div class="category-overlay"><div class="category-label"><span>Discover</span>Necklaces</div></div>
+      </div>
+      <div class="category-card" onclick="window.location='{{ url_for('shop', category='Rings') }}'">
+        <img src="/static/images/CategoryImageForRings.jpeg" alt="Rings" loading="lazy">
+        <div class="category-overlay"><div class="category-label"><span>Cherish</span>Rings</div></div>
+      </div>
+      <div class="category-card" onclick="window.location='{{ url_for('shop', category='Bracelets') }}'">
+        <img src="/static/images/b2c.jpeg" alt="Bracelets" loading="lazy">
+        <div class="category-overlay"><div class="category-label"><span>Adorn</span>Bracelets</div></div>
+      </div>
+      <div class="category-card" onclick="window.location='{{ url_for('shop', category='Anklets') }}'">
+        <img src="/static/images/CategoryImageForAnklets.jpeg" alt="Anklets" loading="lazy">
+        <div class="category-overlay"><div class="category-label"><span>Grace</span>Anklets</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRENDING -->
+{% if trending %}
+<section class="section">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-eyebrow">What's Hot Right Now</p>
+      <h2 class="section-title">Trending <em>Now</em></h2>
+    </div>
+    <div class="products-grid">
+      {% for product in trending %}
+      <div class="product-card reveal reveal-delay-{{ loop.index % 3 }}">
+        <span class="product-badge" style="background:var(--charcoal)">Trending</span>
+        <a href="{{ url_for('product_detail', id=product.id) }}" class="product-img-wrap">
+          <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+        </a>
+        <div class="product-info">
+          <p class="product-category">{{ product.category }}</p>
+          <a href="{{ url_for('product_detail', id=product.id) }}" class="product-name">{{ product.name }}</a>
+          <div class="product-price-wrap">
+            <span class="product-price">PKR {{ "{:,.0f}".format(product.price) }}</span>
+            {% if product.original_price %}<span class="product-orig">PKR {{ "{:,.0f}".format(product.original_price) }}</span>{% endif %}
+          </div>
+          {% if product.stock > 0 %}
+          <div style="display:flex;gap:0.4rem;margin-top:0.75rem">
+            <form action="{{ url_for('add_to_cart', id=product.id) }}" method="post" style="flex:1">
+              <input type="hidden" name="qty" value="1">
+              <button type="submit" class="card-btn-dark">Add to Cart</button>
+            </form>
+            <button class="wishlist-btn {% if product.id in wishlist_ids %}active{% endif %}" data-product-id="{{ product.id }}" style="padding:0.55rem 0.75rem;background:var(--beige);color:var(--black);border:none;cursor:pointer;border-radius:2px;transition:all 0.2s;"><i class="fas fa-heart"></i></button>
+          </div>
+          <form action="{{ url_for('buy_now', id=product.id) }}" method="post" style="margin-top:0.4rem">
+            <input type="hidden" name="qty" value="1">
+            <button type="submit" class="card-btn-buynow">Buy Now <i class="fas fa-bolt"></i></button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- BRAND STORY -->
+<section class="brand-story reveal">
+  <div class="brand-story-img">
+    <img src="https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=800&q=80" alt="ZÉR Story" loading="lazy">
+  </div>
+  <div class="brand-story-text">
+    <p class="section-eyebrow">Our Heritage</p>
+    <h2>Born from the Language<br>of <em style="color:var(--gold-light)">Gold</em></h2>
+    <p>ZÉR — meaning 'gold' in Persian — was born from a simple belief: that jewellery is not merely decoration. It is memory, identity, and grace made tangible.</p>
+    <p>Every piece in our collection is handcrafted by artisans who have inherited their craft across generations. We honour their hands, their eyes, and their patience.</p>
+    <a href="{{ url_for('about') }}" class="btn btn-outline-gold">Read Our Story</a>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+{% if reviews %}
+<section class="section" style="background:var(--ivory)">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-eyebrow">From Our Community</p>
+      <h2 class="section-title">Voices of <em>ZÉR</em></h2>
+    </div>
+    <div class="testimonials-grid">
+      {% for review, user, product in reviews %}
+      <div class="testimonial-card reveal reveal-delay-{{ loop.index % 3 }}">
+        <div class="testimonial-stars">{% for i in range(review.rating) %}★{% endfor %}</div>
+        <p class="testimonial-text">{{ review.comment or 'Absolutely stunning piece. The craftsmanship is impeccable and the quality exceeded all expectations.' }}</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">{{ user.name[0] }}</div>
+          <div>
+            <p class="testimonial-name">{{ user.name }}</p>
+            <p class="testimonial-product">On: {{ product.name }}</p>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- INSTAGRAM GALLERY -->
+<section class="section">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-eyebrow">@zer.jewellery</p>
+      <h2 class="section-title">Life in <em>Gold</em></h2>
+      <p class="section-desc">Follow us on Instagram for editorial jewellery stories, styling inspiration, and behind-the-scenes of our craft.</p>
+    </div>
+    <div class="gallery-grid reveal">
+      <div class="gallery-item">
+        <img src="/static/images/e36d.jpeg" alt="Gallery" loading="lazy">
+        <div class="gallery-item-overlay"><i class="fab fa-instagram"></i></div>
+      </div>
+      <div class="gallery-item">
+        <img src="/static/images/e34.jpeg" alt="Gallery" loading="lazy">
+        <div class="gallery-item-overlay"><i class="fab fa-instagram"></i></div>
+      </div>
+      <div class="gallery-item">
+        <img src="/static/images/e21.jpeg" alt="Gallery" loading="lazy">
+        <div class="gallery-item-overlay"><i class="fab fa-instagram"></i></div>
+      </div>
+      <div class="gallery-item">
+        <img src="/static/images/n2a.jpeg" alt="Gallery" loading="lazy">
+        <div class="gallery-item-overlay"><i class="fab fa-instagram"></i></div>
+      </div>
+      <div class="gallery-item">
+        <img src="/static/images/e24.jpeg" alt="Gallery" loading="lazy">
+        <div class="gallery-item-overlay"><i class="fab fa-instagram"></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<section class="newsletter-section reveal">
+  <p class="section-eyebrow">Stay Connected</p>
+  <h2 class="section-title" style="color:var(--cream)">Enter the World<br>of <em style="color:var(--gold-light)">ZÉR</em></h2>
+  <p class="section-desc" style="color:var(--beige-dark);margin:0 auto">Subscribe for new arrivals, private sales, and editorial jewellery stories. No noise — only gold.</p>
+  <form action="{{ url_for('newsletter') }}" method="post" class="newsletter-form">
+    <input type="email" name="email" placeholder="Your email address" required>
+    <button type="submit">Subscribe</button>
+  </form>
+</section>
+
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<h1 class="admin-title">Contact Messages</h1>
+<table class="admin-table">
+  <thead>
+    <tr><th>Name</th><th>Email</th><th>Subject</th><th>Message</th><th>Date</th></tr>
+  </thead>
+  <tbody>
+    {% for msg in messages %}
+    <tr>
+      <td>{{ msg.name }}</td>
+      <td>{{ msg.email }}</td>
+      <td>{{ msg.subject or '—' }}</td>
+      <td style="max-width:300px;white-space:normal;font-size:0.82rem;color:var(--warm-grey)">{{ msg.message[:120] }}{% if msg.message|length > 120 %}...{% endif %}</td>
+      <td>{{ msg.created_at.strftime('%d %b %Y') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

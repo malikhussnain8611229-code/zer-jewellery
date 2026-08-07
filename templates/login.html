@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Login — ZÉR Jewellery{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-left">
+    <div class="auth-brand">
+      <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="ZÉR">
+      <h1>ZÉR</h1>
+      <p>— JEWELLERY —</p>
+    </div>
+  </div>
+  <div class="auth-right">
+    <div class="auth-form-wrap">
+      <h2 class="auth-title">Welcome Back</h2>
+      <p class="auth-sub">Sign in to your ZÉR account to continue your luxury experience. Don't have an account? <a href="{{ url_for('register') }}" style="color:var(--gold)">Create one here</a></p>
+
+      <!-- FLASH MESSAGES -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" style="padding: 0.75rem 1rem; margin-bottom: 1.25rem; border-radius: 2px; font-size: 0.82rem; letter-spacing: 0.02em; background: {% if category == 'error' %}#fdf2f2{% else %}#f4f8f5{% endif %}; color: {% if category == 'error' %}#9b1c1c{% else %}#1e5631{% endif %}; border: 1px solid {% if category == 'error' %}#f8b4b4{% else %}#c3e6cb{% endif %};">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form class="auth-form" action="{{ url_for('login') }}" method="post">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email" class="form-input" required autofocus>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-input" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+      </form>
+      <div class="divider" style="margin:1.5rem 0">or</div>
+      <div class="auth-footer">
+        <p>Don't have an account? <a href="{{ url_for('register') }}">Create one</a></p>
+        <p style="margin-top:1rem;font-size:0.78rem;color:var(--light-grey)">Admin: admin@zer.com / admin123</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

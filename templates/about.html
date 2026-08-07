@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Our Story — ZÉR Jewellery{% endblock %}
+
+{% block content %}
+
+
+<!-- Story -->
+<div class="about-story">
+  <div class="about-story-img reveal">
+    <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="Our Story">
+  </div>
+  <div class="about-story-text reveal reveal-delay-1">
+    <p class="section-eyebrow" style="justify-content:flex-start;margin-bottom:1rem"><span style="width:30px;height:1px;background:var(--gold);display:inline-block;margin-right:1rem;vertical-align:middle"></span>Our Heritage</p>
+    <h2>Born from the<br>Language of <em>Gold</em></h2>
+    <p>ZÉR — the Persian word for gold — was born from a simple but profound belief: that jewellery is not merely decoration. It is memory, identity, and grace made tangible. Every piece carries within it a story — of the woman who will wear it, the hands that crafted it, and the generations of artisans who perfected the art.</p>
+    <p>Founded in the heart of Pakistan's jewellery tradition, ZÉR bridges the gap between ancestral craftsmanship and contemporary luxury. We work with master karigars whose families have practiced their craft for centuries, honouring their knowledge while designing for the modern woman.</p>
+    <p>Our collections are born at the intersection of quiet luxury and editorial boldness — jewellery that speaks before you do.</p>
+  </div>
+</div>
+
+<!-- Values -->
+<div class="about-values">
+  <div class="value-card reveal">
+    <div class="value-icon"><i class="fas fa-hands"></i></div>
+    <h3 class="value-title">Handcrafted Always</h3>
+    <p class="value-text">Every ZÉR piece is made by hand. We believe that the mark of human craft — its warmth, its slight imperfections, its soul — is irreplaceable by any machine.</p>
+  </div>
+  <div class="value-card reveal reveal-delay-1">
+    <div class="value-icon"><i class="fas fa-gem"></i></div>
+    <h3 class="value-title">Honest Materials</h3>
+    <p class="value-text">We use only ethically sourced metals and gemstones. Every gold hallmark, every certified diamond, every cultured pearl is traceable and responsibly obtained.</p>
+  </div>
+  <div class="value-card reveal reveal-delay-2">
+    <div class="value-icon"><i class="fas fa-heart"></i></div>
+    <h3 class="value-title">Made for Real Women</h3>
+    <p class="value-text">ZÉR jewellery is designed for the woman who lives fully — not just for special occasions, but for Tuesday mornings and quiet dinners and moments that are hers alone.</p>
+  </div>
+</div>
+
+<!-- Mission Section -->
+<section class="section" style="background:var(--charcoal);text-align:center;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;opacity:0.03;font-family:var(--font-serif);font-size:25vw;color:white;display:flex;align-items:center;justify-content:center;pointer-events:none;letter-spacing:0.1em">ZÉR</div>
+  <div class="container" style="position:relative">
+    <p class="section-eyebrow" style="color:var(--gold-light)">Our Promise</p>
+    <h2 class="section-title" style="color:var(--cream)">Every Piece, <em style="color:var(--gold-light)">A Promise</em></h2>
+    <p style="font-size:1.1rem;color:var(--beige-dark);max-width:600px;margin:0 auto 2.5rem;line-height:1.9;font-family:var(--font-serif);font-style:italic">"We do not make jewellery. We make heirlooms. Pieces that a daughter will find in her mother's drawer someday, and understand everything."</p>
+    <a href="{{ url_for('shop') }}" class="btn btn-gold">Explore the Collection</a>
+  </div>
+</section>
+
+<!-- Team / Artisans -->
+<section class="section">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-eyebrow">The Makers</p>
+      <h2 class="section-title">The Hands of <em>ZÉR</em></h2>
+      <p class="section-desc">Our karigar artisans are the soul of ZÉR. Many have been with us since the beginning, their families as deeply rooted in this craft as we are.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2rem" class="reveal">
+      {% for artisan in [('Master Goldsmith','20+ years of filigree work','Lahore'),('Stone Setter','3rd generation craftsman','Karachi'),('Pearl Specialist','Trained in Hyderabad tradition','Hyderabad')] %}
+      <div style="text-align:center;padding:2rem">
+        <div style="width:80px;height:80px;border-radius:50%;background:var(--beige);margin:0 auto 1.25rem;display:flex;align-items:center;justify-content:center;font-family:var(--font-serif);font-size:2rem;color:var(--gold)">✦</div>
+        <h4 style="font-family:var(--font-serif);font-size:1.1rem;margin-bottom:0.4rem">{{ artisan[0] }}</h4>
+        <p style="font-size:0.8rem;color:var(--warm-grey);margin-bottom:0.25rem">{{ artisan[1] }}</p>
+        <p style="font-size:0.75rem;color:var(--light-grey);letter-spacing:0.1em;text-transform:uppercase">{{ artisan[2] }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="newsletter-section reveal">
+  <p class="section-eyebrow">Stay Connected</p>
+  <h2 class="section-title" style="color:var(--cream)">Join the <em style="color:var(--gold-light)">ZÉR</em> Family</h2>
+  <p class="section-desc" style="color:var(--beige-dark);margin:0 auto">Be the first to know about new collections, private events, and the stories behind our craft.</p>
+  <form action="{{ url_for('newsletter') }}" method="post" class="newsletter-form">
+    <input type="email" name="email" placeholder="Your email address" required>
+    <button type="submit">Subscribe</button>
+  </form>
+</section>
+{% endblock %}

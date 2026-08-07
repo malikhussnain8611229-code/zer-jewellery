@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Contact Us — ZÉR Jewellery{% endblock %}
+
+{% block content %}
+<div class="contact-page">
+  <div class="contact-inner">
+    <div class="contact-info reveal">
+      <p class="section-eyebrow" style="justify-content:flex-start;margin-bottom:1.5rem"><span style="width:30px;height:1px;background:var(--gold);display:inline-block;margin-right:1rem;vertical-align:middle"></span>Get in Touch</p>
+      <h2>We'd Love to<br><em style="font-style:italic;color:var(--gold)">Hear from You</em></h2>
+      <p>Whether you have a question about a piece, need help with your order, or want to create something bespoke for a special occasion — we are here for you.</p>
+
+      <div class="contact-detail">
+        <div class="contact-detail-icon"><i class="fas fa-store"></i></div>
+        <div class="contact-detail-text">
+          <p>Store</p>
+          <span>Online Only — We deliver all across Pakistan</span>
+        </div>
+      </div>
+
+      <div class="contact-detail">
+        <div class="contact-detail-icon"><i class="fas fa-envelope"></i></div>
+        <div class="contact-detail-text">
+          <p>Email</p>
+          <a href="mailto:zerofficial995@gmail.com" style="color:var(--black);text-decoration:none;font-size:0.9rem;">zerofficial995@gmail.com</a>
+        </div>
+      </div>
+
+      <div class="contact-detail">
+        <div class="contact-detail-icon"><i class="fab fa-whatsapp"></i></div>
+        <div class="contact-detail-text">
+          <p>WhatsApp</p>
+          <a href="https://wa.link/jp6xn8" target="_blank" style="color:var(--black);text-decoration:none;font-size:0.9rem;">+92 343 4585655</a>
+        </div>
+      </div>
+
+      <div class="contact-detail">
+        <div class="contact-detail-icon"><i class="fas fa-clock"></i></div>
+        <div class="contact-detail-text">
+          <p>Hours</p>
+          <span>24/7</span>
+        </div>
+      </div>
+
+      <div class="contact-social">
+        <a href="https://instagram.com/official_zer_" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
+        <a href="https://www.facebook.com/share/1Hdv8RHKKD/" target="_blank" title="Facebook"><i class="fab fa-facebook"></i></a>
+        <a href="https://wa.link/jp6xn8" target="_blank" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+      </div>
+
+    </div>
+
+    <div class="contact-form-wrap reveal reveal-delay-1">
+      <h3>Send Us a Message</h3>
+      <form action="{{ url_for('contact') }}" method="post" class="contact-form">
+        <div class="form-group">
+          <label class="form-label">Your Name</label>
+          <input type="text" name="name" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subject</label>
+          <input type="text" name="subject" class="form-input" placeholder="Order inquiry, Custom piece, etc.">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <textarea name="message" class="form-input form-textarea" rows="6" required placeholder="Tell us how we can help you..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Send Message <i class="fas fa-paper-plane"></i></button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

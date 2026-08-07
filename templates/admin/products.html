@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+  <h1 class="admin-title" style="margin:0">Products</h1>
+  <a href="{{ url_for('admin_add_product') }}" class="btn btn-gold btn-sm"><i class="fas fa-plus"></i> Add Product</a>
+</div>
+<table class="admin-table">
+  <thead>
+    <tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Featured</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {% for p in products %}
+    <tr>
+      <td><img src="{{ p.image_url }}" style="width:48px;height:48px;object-fit:cover;border-radius:4px" alt="{{ p.name }}"></td>
+      <td>{{ p.name }}</td>
+      <td>{{ p.category }}</td>
+      <td>PKR {{ "{:,.0f}".format(p.price) }}</td>
+      <td>{{ p.stock }}</td>
+      <td>{% if p.is_featured %}<span style="color:var(--gold)">★</span>{% else %}—{% endif %}</td>
+      <td class="admin-actions">
+        <a href="{{ url_for('admin_edit_product', id=p.id) }}" class="btn-edit"><i class="fas fa-edit"></i> Edit</a>
+        <a href="{{ url_for('admin_delete_product', id=p.id) }}" class="btn-danger confirm-delete"><i class="fas fa-trash"></i> Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

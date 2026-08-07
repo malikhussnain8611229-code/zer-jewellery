@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<h1 class="admin-title">Users</h1>
+<table class="admin-table">
+  <thead>
+    <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Admin</th><th>Joined</th></tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.id }}</td>
+      <td>{{ user.name }}</td>
+      <td>{{ user.email }}</td>
+      <td>{{ user.phone or '—' }}</td>
+      <td>{% if user.is_admin %}<span style="color:var(--gold)">✓ Admin</span>{% else %}—{% endif %}</td>
+      <td>{{ user.created_at.strftime('%d %b %Y') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

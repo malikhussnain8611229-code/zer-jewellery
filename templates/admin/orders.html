@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<h1 class="admin-title">Orders</h1>
+<table class="admin-table">
+  <thead>
+    <tr><th>ID</th><th>Customer</th><th>Email</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th><th>Update</th></tr>
+  </thead>
+  <tbody>
+    {% for order, user in orders %}
+    <tr>
+      <td>#{{ order.id }}</td>
+      <td>{{ order.shipping_name }}</td>
+      <td>{{ user.email }}</td>
+      <td>PKR {{ "{:,.0f}".format(order.total) }}</td>
+      <td>{{ order.payment_method }}</td>
+      <td><span class="order-status status-{{ order.status|lower }}">{{ order.status }}</span></td>
+      <td>{{ order.created_at.strftime('%d %b %Y') }}</td>
+      <td>
+        <form action="{{ url_for('update_order_status', id=order.id) }}" method="post" style="display:flex;gap:0.5rem">
+          <select name="status" class="sort-select" style="font-size:0.78rem;padding:0.4rem 1.5rem 0.4rem 0.75rem">
+            {% for status in ['Pending','Confirmed','Shipped','Delivered','Cancelled'] %}
+            <option {% if order.status==status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn-edit"><i class="fas fa-check"></i></button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

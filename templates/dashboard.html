@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}My Account — ZÉR Jewellery{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+  <div class="dashboard-header">
+    <h1>My Account</h1>
+    <p style="color:var(--warm-grey);font-size:0.88rem;margin-top:0.5rem">Welcome back, <strong>{{ user.name }}</strong></p>
+  </div>
+
+  <div class="dashboard-tabs">
+    <button class="dash-tab active" data-panel="orders-panel">Orders</button>
+    <button class="dash-tab" data-panel="wishlist-panel">Wishlist</button>
+    <button class="dash-tab" data-panel="profile-panel">Profile</button>
+  </div>
+
+  <!-- Orders -->
+  <div class="dash-panel active" id="orders-panel">
+    {% if orders %}
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Order #</th><th>Date</th><th>Total</th><th>Payment</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr>
+          <td>#{{ order.id }}</td>
+          <td>{{ order.created_at.strftime('%d %b %Y') }}</td>
+          <td>PKR {{ "{:,.0f}".format(order.total) }}</td>
+          <td>{{ order.payment_method }}</td>
+          <td><span class="order-status status-{{ order.status|lower }}">{{ order.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-shopping-bag"></i>
+      <h3>No orders yet</h3>
+      <p>Your order history will appear here after your first purchase.</p>
+      <a href="{{ url_for('shop') }}" class="btn btn-primary">Start Shopping</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Wishlist -->
+  <div class="dash-panel" id="wishlist-panel">
+    {% if wishlist_items %}
+    <div class="products-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">
+      {% for wish, product in wishlist_items %}
+      <div class="product-card">
+        <div class="product-img-wrap">
+          <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+          <div class="product-actions">
+            <form action="{{ url_for('add_to_cart', id=product.id) }}" method="post" style="flex:1;display:flex">
+              <input type="hidden" name="qty" value="1">
+              <button type="submit" class="product-action-btn" style="flex:1">Add to Cart</button>
+            </form>
+            <button class="product-action-btn wishlist-btn active" data-product-id="{{ product.id }}"><i class="fas fa-heart"></i></button>
+          </div>
+        </div>
+        <div class="product-info">
+          <p class="product-category">{{ product.category }}</p>
+          <a href="{{ url_for('product_detail', id=product.id) }}" class="product-name">{{ product.name }}</a>
+          <div class="product-price-wrap"><span class="product-price">PKR {{ "{:,.0f}".format(product.price) }}</span></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-heart"></i>
+      <h3>Your wishlist is empty</h3>
+      <p>Save pieces you love by clicking the heart icon on any product.</p>
+      <a href="{{ url_for('shop') }}" class="btn btn-primary">Discover Jewellery</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Profile -->
+  <div class="dash-panel" id="profile-panel">
+    <form action="{{ url_for('update_profile') }}" method="post" class="profile-form">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" name="name" class="form-input" value="{{ user.name }}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email (cannot change)</label>
+        <input type="email" class="form-input" value="{{ user.email }}" disabled style="opacity:0.6">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input type="tel" name="phone" class="form-input" value="{{ user.phone or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Default Shipping Address</label>
+        <textarea name="address" class="form-input form-textarea" rows="3">{{ user.address or '' }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+    <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid var(--beige)">
+      <a href="{{ url_for('logout') }}" class="btn btn-outline" style="border-color:var(--beige-dark);color:var(--warm-grey)">
+        <i class="fas fa-sign-out-alt"></i> Sign Out
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

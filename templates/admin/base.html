@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block body_class %}admin-body{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-logo">
+      <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="ZÉR">
+      <p style="color:var(--beige-dark);font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;margin-top:0.5rem">Admin Panel</p>
+    </div>
+    <nav class="admin-nav">
+  <a href="{{ url_for('admin_dashboard') }}" class="{% if request.endpoint=='admin_dashboard' %}active{% endif %}"><i class="fas fa-chart-line"></i> Dashboard</a>
+  <a href="{{ url_for('admin_products') }}" class="{% if 'product' in request.endpoint %}active{% endif %}"><i class="fas fa-gem"></i> Products</a>
+  <a href="{{ url_for('admin_orders') }}" class="{% if request.endpoint=='admin_orders' %}active{% endif %}">
+    <i class="fas fa-shopping-bag"></i> Orders
+{% if pending_orders is defined and pending_orders > 0 %}    <span class="admin-badge">{{ pending_orders }}</span>
+    {% endif %}
+  </a>
+  <a href="{{ url_for('admin_users') }}" class="{% if request.endpoint=='admin_users' %}active{% endif %}"><i class="fas fa-users"></i> Users</a>
+  <a href="{{ url_for('admin_messages') }}" class="{% if request.endpoint=='admin_messages' %}active{% endif %}">
+    <i class="fas fa-envelope"></i> Messages
+{% if new_messages is defined and new_messages > 0 %}    <span class="admin-badge">{{ new_messages }}</span>
+    {% endif %}
+  </a>
+  <a href="{{ url_for('home') }}" style="margin-top:2rem;border-top:1px solid rgba(255,255,255,0.08);padding-top:1.25rem"><i class="fas fa-store"></i> View Store</a>
+  <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+</nav>
+  </aside>
+  <div class="admin-content">
+    {% block admin_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

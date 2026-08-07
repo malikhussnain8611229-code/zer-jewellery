@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Your Cart — ZÉR Jewellery{% endblock %}
+
+{% block content %}
+<div class="cart-page">
+  <div class="container">
+    <h1 class="cart-title">Your Cart</h1>
+    {% if items %}
+    <div class="cart-inner">
+      <div class="cart-items">
+        {% for item in items %}
+        <div class="cart-item">
+          <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="cart-item-img">
+          <div>
+            <p class="cart-item-name">{{ item.product.name }}</p>
+            <p class="cart-item-meta">{{ item.product.category }} {% if item.product.material %}· {{ item.product.material }}{% endif %}</p>
+            <form action="{{ url_for('update_cart', id=item.product.id) }}" method="post" style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem">
+              <div class="qty-control">
+                <button type="button" class="qty-btn" data-action="minus">−</button>
+                <input type="number" name="qty" value="{{ item.qty }}" min="1" max="99" class="qty-input">
+                <button type="button" class="qty-btn" data-action="plus">+</button>
+              </div>
+              <button type="submit" class="btn btn-outline btn-sm">Update</button>
+            </form>
+            <a href="{{ url_for('remove_from_cart', id=item.product.id) }}" class="remove-btn"><i class="fas fa-trash-alt"></i> Remove</a>
+          </div>
+          <div style="text-align:right">
+            <p class="cart-item-price">PKR {{ "{:,.0f}".format(item.subtotal) }}</p>
+            <p style="font-size:0.78rem;color:var(--light-grey);margin-top:0.25rem">PKR {{ "{:,.0f}".format(item.product.price) }} each</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="cart-summary">
+        <h3>Order Summary</h3>
+        <div class="summary-row"><span>Subtotal</span><span>PKR {{ "{:,.0f}".format(total) }}</span></div>
+        <div class="summary-row"><span>Shipping</span><span>PKR 200</span></div>
+<div class="summary-row total"><span>Total</span><span>PKR {{ "{:,.0f}".format(total + 200) }}</span></div>
+        <a href="{{ url_for('checkout') }}" class="btn btn-primary btn-full" style="margin-top:1.5rem">Proceed to Checkout <i class="fas fa-arrow-right"></i></a>
+        <a href="{{ url_for('shop') }}" class="btn btn-outline btn-full" style="margin-top:0.75rem">Continue Shopping</a>
+        <div style="margin-top:1.5rem;text-align:center">
+          <p style="font-size:0.75rem;color:var(--light-grey);letter-spacing:0.1em">SECURE CHECKOUT</p>
+          <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;font-size:1.5rem;color:var(--beige-dark)">
+            <i class="fab fa-cc-visa"></i><i class="fab fa-cc-mastercard"></i><i class="fas fa-shield-alt" style="font-size:1.2rem;margin-top:0.15rem"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-shopping-bag"></i>
+      <h3>Your cart is empty</h3>
+      <p>Discover our curated jewellery collections and find your perfect piece.</p>
+      <a href="{{ url_for('shop') }}" class="btn btn-primary">Start Shopping</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

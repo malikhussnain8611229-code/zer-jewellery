@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Shop — ZÉR Jewellery{% endblock %}
+
+{% block content %}
+<div class="shop-header">
+  <div class="container">
+    <h1 class="shop-title">{% if category %}{{ category }}{% else %}All Collections{% endif %}</h1>
+    <p class="shop-meta">{{ products.total }} pieces curated for you</p>
+  </div>
+</div>
+
+<div class="shop-layout">
+  <aside class="shop-sidebar">
+    <div class="sidebar-section">
+      <h4 class="sidebar-title">Categories</h4>
+      <ul class="filter-list">
+        <li><a href="{{ url_for('shop') }}" class="{% if not category %}active{% endif %}">All Jewellery</a></li>
+        {% for cat in categories %}
+        <li><a href="{{ url_for('shop', category=cat) }}" class="{% if category==cat %}active{% endif %}">{{ cat }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="sidebar-section">
+      <h4 class="sidebar-title">Sort By</h4>
+      <ul class="filter-list">
+        <li><a href="{{ url_for('shop', category=category, sort='newest') }}" class="{% if sort=='newest' %}active{% endif %}">Newest First</a></li>
+        <li><a href="{{ url_for('shop', category=category, sort='price_asc') }}" class="{% if sort=='price_asc' %}active{% endif %}">Price: Low to High</a></li>
+        <li><a href="{{ url_for('shop', category=category, sort='price_desc') }}" class="{% if sort=='price_desc' %}active{% endif %}">Price: High to Low</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-section">
+      <h4 class="sidebar-title">Quick Search</h4>
+      <form action="{{ url_for('shop') }}" method="get" style="display:flex;flex-direction:column;gap:0.75rem">
+        <input type="text" name="search" value="{{ search }}" placeholder="Search..." class="form-input" style="font-size:0.82rem">
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      </form>
+    </div>
+  </aside>
+
+  <div>
+    <div class="shop-controls">
+      <p style="font-size:0.82rem;color:var(--warm-grey)">
+        {% if search %}Results for "{{ search }}" — {% endif %}{{ products.total }} items
+      </p>
+      <select class="sort-select" onchange="location.href=this.value">
+        <option value="{{ url_for('shop', category=category, sort='newest') }}" {% if sort=='newest' %}selected{% endif %}>Newest</option>
+        <option value="{{ url_for('shop', category=category, sort='price_asc') }}" {% if sort=='price_asc' %}selected{% endif %}>Price ↑</option>
+        <option value="{{ url_for('shop', category=category, sort='price_desc') }}" {% if sort=='price_desc' %}selected{% endif %}>Price ↓</option>
+      </select>
+    </div>
+
+    {% if products.items %}
+    <div class="products-grid">
+      {% for product in products.items %}
+      <div class="product-card reveal reveal-delay-{{ loop.index % 4 }}">
+        {% if product.original_price %}<span class="product-badge">Sale</span>{% endif %}
+        {% if product.stock == 0 %}<span class="product-badge" style="background:var(--warm-grey)">Sold Out</span>{% endif %}
+
+        <a href="{{ url_for('product_detail', id=product.id) }}" style="display:block;overflow:hidden;aspect-ratio:1;">
+          <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;transition:transform 0.7s ease;">
+        </a>
+
+        <div class="product-info">
+          <p class="product-category">{{ product.category }}</p>
+          <a href="{{ url_for('product_detail', id=product.id) }}" class="product-name">{{ product.name }}</a>
+          <div class="product-price-wrap">
+            <span class="product-price">PKR {{ "{:,.0f}".format(product.price) }}</span>
+            {% if product.original_price %}<span class="product-orig">PKR {{ "{:,.0f}".format(product.original_price) }}</span>{% endif %}
+          </div>
+          {% if product.stock > 0 %}
+          <div style="display:flex;gap:0.4rem;margin-top:0.75rem">
+            <form action="{{ url_for('add_to_cart', id=product.id) }}" method="post" style="flex:1">
+              <input type="hidden" name="qty" value="1">
+              <button type="submit" class="card-btn-dark">Add to Cart</button>
+            </form>
+            <button class="wishlist-btn {% if product.id in wishlist_ids %}active{% endif %}" data-product-id="{{ product.id }}" style="padding:0.55rem 0.75rem;background:var(--beige);color:var(--black);border:none;cursor:pointer;border-radius:2px;transition:all 0.2s;{% if product.id in wishlist_ids %}background:var(--gold);color:white;{% endif %}"><i class="fas fa-heart"></i></button>
+          </div>
+          <form action="{{ url_for('buy_now', id=product.id) }}" method="post" style="margin-top:0.4rem">
+            <input type="hidden" name="qty" value="1">
+            <button type="submit" class="card-btn-buynow">Buy Now <i class="fas fa-bolt"></i></button>
+          </form>
+          {% else %}
+          <div style="margin-top:0.75rem;padding:0.65rem;background:var(--beige);color:var(--light-grey);text-align:center;font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;border-radius:2px;">Sold Out</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if products.pages > 1 %}
+    <div class="pagination">
+      {% if products.has_prev %}
+      <a href="{{ url_for('shop', category=category, search=search, sort=sort, page=products.prev_num) }}" class="page-btn"><i class="fas fa-chevron-left"></i></a>
+      {% endif %}
+      {% for p in products.iter_pages() %}
+        {% if p %}
+        <a href="{{ url_for('shop', category=category, search=search, sort=sort, page=p) }}" class="page-btn {% if p==products.page %}active{% endif %}">{{ p }}</a>
+        {% else %}
+        <span class="page-btn" style="opacity:0.4">…</span>
+        {% endif %}
+      {% endfor %}
+      {% if products.has_next %}
+      <a href="{{ url_for('shop', category=category, search=search, sort=sort, page=products.next_num) }}" class="page-btn"><i class="fas fa-chevron-right"></i></a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-gem"></i>
+      <h3>No pieces found</h3>
+      <p>Try adjusting your filters or search terms.</p>
+      <a href="{{ url_for('shop') }}" class="btn btn-primary">Browse All</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
