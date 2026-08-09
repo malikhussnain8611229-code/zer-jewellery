@@ -241,18 +241,45 @@ def toggle_wishlist(id):
         db.session.add(w)
         db.session.commit()
         return jsonify({'status': 'added'})
-@app.route('/checkout', methods=['GET','POST'])
+@app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     if 'user_id' not in session:
         flash('Please log in to checkout.', 'warning')
         return redirect(url_for('login'))
+
     cart_data = get_cart()
+
     if not cart_data:
         return redirect(url_for('cart'))
+
     if request.method == 'POST':
+
         if cart_total() < 500:
-            flash('Minimum order amount is PKR 500 (excluding delivery). Please add more items to proceed.', 'error')
+            flash(
+                'Minimum order amount is PKR 500 (excluding delivery). Please add more items to proceed.',
+                'error'
+            )
             return redirect(url_for('checkout'))
+
+        # Check stock BEFORE creating the order
+        for pid, item in cart_data.items():
+            product = Product.query.get(int(pid))
+
+            if not product:
+                flash(
+                    'One of the products in your cart is no longer available.',
+                    'error'
+                )
+                return redirect(url_for('cart'))
+
+            if product.stock < item['qty']:
+                flash(
+                    f'Sorry, only {product.stock} unit(s) of "{product.name}" are available.',
+                    'error'
+                )
+                return redirect(url_for('cart'))
+
+        # All stock checks passed — create the order
         order = Order(
             user_id=session['user_id'],
             total=cart_total() + 200,
@@ -263,25 +290,44 @@ def checkout():
             items_json=json.dumps(cart_data),
             status='Confirmed'
         )
+
         db.session.add(order)
+
+        # Reduce stock
         for pid, item in cart_data.items():
-            p = Product.query.get(int(pid))
-            if p and p.stock >= item['qty']:
-                p.stock -= item['qty']
+            product = Product.query.get(int(pid))
+            product.stock -= item['qty']
+
         db.session.commit()
+
         session['cart'] = {}
-        flash('Order placed successfully! Thank you for shopping with ZER.', 'success')
+
+        flash(
+            'Order placed successfully! Thank you for shopping with ZER.',
+            'success'
+        )
+
         return redirect(url_for('order_confirmed', id=order.id))
+
+    # Prepare cart items for the checkout page
     items = []
+
     for pid, item in cart_data.items():
-        p = Product.query.get(int(pid))
-        if p:
-            items.append({'product': p, 'qty': item['qty'], 'subtotal': item['price']*item['qty']})
+        product = Product.query.get(int(pid))
+
+        if product:
+            items.append({
+                'product': product,
+                'qty': item['qty'],
+                'subtotal': item['price'] * item['qty']
+            })
+
     return render_template(
-    'checkout.html',
-    items=items,
-    total=cart_total()
-)
+        'checkout.html',
+        items=items,
+        total=cart_total()
+    )
+
 
 @app.route('/order-confirmed/<int:id>')
 def order_confirmed(id):
@@ -294,14 +340,18 @@ def order_confirmed(id):
         user_id=session['user_id']
     ).first_or_404()
 
-    return render_template('order_confirmed.html', order=order)
+    return render_template(
+        'order_confirmed.html',
+        order=order
+    )
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     # If user is already logged in, redirect based on role
     if 'user_id' in session:
         if session.get('is_admin'):
             return redirect(url_for('admin_dashboard'))
-        return redirect(url_for('home'))  # Changed 'dashboard' to 'home' or 'shop'
+
+        return redirect(url_for('home'))
 
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
@@ -309,17 +359,25 @@ def login():
 
         user = User.query.filter_by(email=email).first()
 
-        # Check against password field (ensure this matches your User model attribute)
-        password_field = getattr(user, 'password_hash', getattr(user, 'password', None)) if user else None
+        password_field = (
+            getattr(user, 'password_hash', getattr(user, 'password', None))
+            if user else None
+        )
 
-        if user and password_field and check_password_hash(password_field, password):
+        if user and password_field and check_password_hash(
+            password_field,
+            password
+        ):
             session['user_id'] = user.id
             session['is_admin'] = user.is_admin
+
             flash('Welcome back!', 'success')
-            
+
             if user.is_admin:
                 return redirect(url_for('admin_dashboard'))
-            return redirect(url_for('home'))  # Changed 'dashboard' to 'home'
+
+            return redirect(url_for('home'))
+
         else:
             flash('Invalid email or password.', 'error')
 
@@ -550,15 +608,43 @@ def update_order_status(id):
     db.session.commit()
     flash('Order status updated.', 'success')
     return redirect(url_for('admin_orders'))
+@app.route('/admin/order/delete/<int:id>', methods=['POST'])
+@admin_required
+def admin_delete_order(id):
+    order = Order.query.get_or_404(id)
 
+    # Restore stock for every product in this order
+    try:
+        order_items = json.loads(order.items_json or '{}')
+
+        for pid, item in order_items.items():
+            product = Product.query.get(int(pid))
+
+            if product:
+                product.stock += int(item.get('qty', 0))
+
+    except (json.JSONDecodeError, ValueError, TypeError):
+        flash('Order could not be deleted because its item data is invalid.', 'error')
+        return redirect(url_for('admin_orders'))
+
+    # Delete the order after restoring stock
+    db.session.delete(order)
+    db.session.commit()
+
+    flash('Order deleted and product stock restored.', 'success')
+    return redirect(url_for('admin_orders'))
 @app.route('/admin/users')
 @admin_required
 def admin_users():
     users = User.query.order_by(User.created_at.desc()).all()
     pending_orders, new_messages = get_admin_counts()
-    return render_template('admin/users.html', users=users,
-                           pending_orders=pending_orders, new_messages=new_messages)
 
+    return render_template(
+        'admin/users.html',
+        users=users,
+        pending_orders=pending_orders,
+        new_messages=new_messages
+    )
 @app.route('/admin/messages')
 @admin_required
 def admin_messages():
