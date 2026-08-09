@@ -283,7 +283,18 @@ def checkout():
     total=cart_total()
 )
 
+@app.route('/order-confirmed/<int:id>')
+def order_confirmed(id):
+    if 'user_id' not in session:
+        flash('Please log in to view your order.', 'warning')
+        return redirect(url_for('login'))
 
+    order = Order.query.filter_by(
+        id=id,
+        user_id=session['user_id']
+    ).first_or_404()
+
+    return render_template('order_confirmed.html', order=order)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     # If user is already logged in, redirect based on role
