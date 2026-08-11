@@ -110,7 +110,14 @@ def get_admin_counts():
     pending_orders = Order.query.filter_by(status='Confirmed').count()
     new_messages = ContactMessage.query.filter_by(is_read=False).count()
     return pending_orders, new_messages
+import json as json_module
 
+@app.template_filter('fromjson')
+def fromjson_filter(value):
+    try:
+        return json_module.loads(value)
+    except:
+        return {}
 @app.context_processor
 def inject_globals():
     uid = session.get('user_id')

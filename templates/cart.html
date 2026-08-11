@@ -37,8 +37,16 @@
         <div class="summary-row"><span>Subtotal</span><span>PKR {{ "{:,.0f}".format(total) }}</span></div>
         <div class="summary-row"><span>Shipping</span><span>PKR 200</span></div>
 <div class="summary-row total"><span>Total</span><span>PKR {{ "{:,.0f}".format(total + 200) }}</span></div>
-        <a href="{{ url_for('checkout') }}" class="btn btn-primary btn-full" style="margin-top:1.5rem">Proceed to Checkout <i class="fas fa-arrow-right"></i></a>
-        <a href="{{ url_for('shop') }}" class="btn btn-outline btn-full" style="margin-top:0.75rem">Continue Shopping</a>
+        {% if total < 500 %}
+<div style="background:#FDE8E8;border-left:3px solid #C47A6A;padding:0.875rem 1.25rem;border-radius:4px;margin-top:1.5rem;font-size:0.85rem;color:#C47A6A;">
+  <i class="fas fa-exclamation-circle" style="margin-right:0.5rem"></i>
+  Minimum order amount is <strong>PKR 500</strong> (excluding delivery). Please add more items to proceed.
+</div>
+<button disabled style="width:100%;margin-top:0.75rem;padding:0.9rem;background:var(--beige);color:var(--light-grey);border:none;border-radius:2px;font-family:var(--font-sans);font-size:0.76rem;letter-spacing:0.2em;text-transform:uppercase;cursor:not-allowed;">Proceed to Checkout</button>
+{% else %}
+<a href="{{ url_for('checkout') }}" class="btn btn-primary btn-full" style="margin-top:1.5rem">Proceed to Checkout <i class="fas fa-arrow-right"></i></a>
+{% endif %}
+ btn-outline btn-full" style="margin-top:0.75rem">Continue Shopping</a>
         <div style="margin-top:1.5rem;text-align:center">
           <p style="font-size:0.75rem;color:var(--light-grey);letter-spacing:0.1em">SECURE CHECKOUT</p>
           <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;font-size:1.5rem;color:var(--beige-dark)">

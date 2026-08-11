@@ -3,7 +3,19 @@
 <h1 class="admin-title">Orders</h1>
 <table class="admin-table">
   <thead>
-    <tr><th>ID</th><th>Customer</th><th>Email</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th><th>Update</th><th>Delete</th></tr>
+    <tr>
+      <th>ID</th>
+      <th>Customer</th>
+      <th>Email</th>
+      <th>Phone</th>
+      <th>Items Ordered</th>
+      <th>Total</th>
+      <th>Payment</th>
+      <th>Address</th>
+      <th>Status</th>
+      <th>Date</th>
+      <th>Update</th>
+    </tr>
   </thead>
   <tbody>
     {% for order, user in orders %}
@@ -11,8 +23,23 @@
       <td>#{{ order.id }}</td>
       <td>{{ order.shipping_name }}</td>
       <td>{{ user.email }}</td>
+      <td>{{ order.shipping_phone or '—' }}</td>
+      <td>
+        {% if order.items_json %}
+          {% set items = order.items_json | fromjson %}
+          {% for pid, item in items.items() %}
+          <div style="margin-bottom:0.4rem;padding:0.4rem 0.6rem;background:var(--beige);border-radius:4px;font-size:0.78rem;">
+            <strong>{{ item.name }}</strong><br>
+            <span style="color:var(--warm-grey)">Qty: {{ item.qty }} × PKR {{ "{:,.0f}".format(item.price) }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <span style="color:var(--light-grey)">—</span>
+        {% endif %}
+      </td>
       <td>PKR {{ "{:,.0f}".format(order.total) }}</td>
       <td>{{ order.payment_method }}</td>
+      <td style="font-size:0.78rem;max-width:150px;">{{ order.shipping_address or '—' }}</td>
       <td><span class="order-status status-{{ order.status|lower }}">{{ order.status }}</span></td>
       <td>{{ order.created_at.strftime('%d %b %Y') }}</td>
       <td>
@@ -23,14 +50,6 @@
             {% endfor %}
           </select>
           <button type="submit" class="btn-edit"><i class="fas fa-check"></i></button>
-        </form>
-      </td>
-            <td>
-        <form action="{{ url_for('admin_delete_order', id=order.id) }}" method="post"
-              onsubmit="return confirm('Are you sure you want to permanently delete this order? The stock will be restored.');">
-          <button type="submit" class="btn-edit" style="color:#b33;">
-            <i class="fas fa-trash"></i>
-          </button>
         </form>
       </td>
     </tr>

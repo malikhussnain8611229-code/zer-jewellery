@@ -5,7 +5,18 @@
 <div class="checkout-page">
   <div class="container">
 <h1 class="checkout-title">Checkout</h1>
+{% if total < 500 %}
+<div style="background:#FDE8E8;border-left:3px solid #C47A6A;padding:0.875rem 1.25rem;border-radius:4px;margin-bottom:2rem;font-size:0.85rem;color:#C47A6A;">
+  <i class="fas fa-exclamation-circle" style="margin-right:0.5rem"></i>
+  Your current order total is <strong>PKR {{ "{:,.0f}".format(total) }}</strong>. Minimum order amount is <strong>PKR 500</strong> (excluding delivery of PKR 200). Please go back and add more items.
+  <a href="{{ url_for('cart') }}" style="display:block;margin-top:0.75rem;color:#C47A6A;font-weight:500">← Go back to cart</a>
+</div>
+{% else %}
 <div style="background:var(--gold-pale);border-left:3px solid var(--gold);padding:0.875rem 1.25rem;border-radius:4px;margin-bottom:2rem;font-size:0.85rem;color:var(--charcoal);">
+  <i class="fas fa-info-circle" style="color:var(--gold);margin-right:0.5rem"></i>
+  Minimum order amount is <strong>PKR 500</strong> (excluding delivery charges of PKR 200).
+</div>
+{% endif %}<div style="background:var(--gold-pale);border-left:3px solid var(--gold);padding:0.875rem 1.25rem;border-radius:4px;margin-bottom:2rem;font-size:0.85rem;color:var(--charcoal);">
   <i class="fas fa-info-circle" style="color:var(--gold);margin-right:0.5rem"></i>
   Minimum order amount is <strong>PKR 500</strong> (excluding delivery charges of PKR 200).
 </div>    <div class="checkout-inner">
