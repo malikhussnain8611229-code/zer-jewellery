@@ -15,6 +15,7 @@
             <p class="cart-item-name">{{ item.product.name }}</p>
             <p class="cart-item-meta">{{ item.product.category }} {% if item.product.material %}· {{ item.product.material }}{% endif %}</p>
             <form action="{{ url_for('update_cart', id=item.product.id) }}" method="post" style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <div class="qty-control">
                 <button type="button" class="qty-btn" data-action="minus">−</button>
                 <input type="number" name="qty" value="{{ item.qty }}" min="1" max="99" class="qty-input">
@@ -22,7 +23,10 @@
               </div>
               <button type="submit" class="btn btn-outline btn-sm">Update</button>
             </form>
-            <a href="{{ url_for('remove_from_cart', id=item.product.id) }}" class="remove-btn"><i class="fas fa-trash-alt"></i> Remove</a>
+            <form action="{{ url_for('remove_from_cart', id=item.product.id) }}" method="post" style="margin-top:.5rem">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="remove-btn" style="background:none;border:0;padding:0;cursor:pointer"><i class="fas fa-trash-alt"></i> Remove</button>
+</form>
           </div>
           <div style="text-align:right">
             <p class="cart-item-price">PKR {{ "{:,.0f}".format(item.subtotal) }}</p>
@@ -46,7 +50,7 @@
 {% else %}
 <a href="{{ url_for('checkout') }}" class="btn btn-primary btn-full" style="margin-top:1.5rem">Proceed to Checkout <i class="fas fa-arrow-right"></i></a>
 {% endif %}
- btn-outline btn-full" style="margin-top:0.75rem">Continue Shopping</a>
+<a href="{{ url_for('shop') }}" class="btn btn-outline btn-full" style="margin-top:0.75rem">Continue Shopping</a>
         <div style="margin-top:1.5rem;text-align:center">
           <p style="font-size:0.75rem;color:var(--light-grey);letter-spacing:0.1em">SECURE CHECKOUT</p>
           <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;font-size:1.5rem;color:var(--beige-dark)">

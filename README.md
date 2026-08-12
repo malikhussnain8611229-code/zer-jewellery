@@ -28,8 +28,8 @@ The database is auto-created and seeded with 16 jewellery products on first run.
 ## 🔐 Admin Access
 
 - **URL:** `http://localhost:5000/admin`
-- **Email:** `admin@zer.com`
-- **Password:** `admin123`
+- Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as environment variables before starting the app.
+- `ADMIN_PASSWORD` must be at least 12 characters.
 
 ---
 

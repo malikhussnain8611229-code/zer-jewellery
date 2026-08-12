@@ -62,12 +62,14 @@
           {% if product.stock > 0 %}
           <div style="display:flex;gap:0.4rem;margin-top:0.75rem">
             <form action="{{ url_for('add_to_cart', id=product.id) }}" method="post" style="flex:1">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="qty" value="1">
               <button type="submit" class="card-btn-dark">Add to Cart</button>
             </form>
             <button class="wishlist-btn {% if product.id in wishlist_ids %}active{% endif %}" data-product-id="{{ product.id }}" style="padding:0.55rem 0.75rem;background:var(--beige);color:var(--black);border:none;cursor:pointer;border-radius:2px;transition:all 0.2s;"><i class="fas fa-heart"></i></button>
           </div>
           <form action="{{ url_for('buy_now', id=product.id) }}" method="post" style="margin-top:0.4rem">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="qty" value="1">
             <button type="submit" class="card-btn-buynow">Buy Now <i class="fas fa-bolt"></i></button>
           </form>
@@ -139,12 +141,14 @@
           {% if product.stock > 0 %}
           <div style="display:flex;gap:0.4rem;margin-top:0.75rem">
             <form action="{{ url_for('add_to_cart', id=product.id) }}" method="post" style="flex:1">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="qty" value="1">
               <button type="submit" class="card-btn-dark">Add to Cart</button>
             </form>
             <button class="wishlist-btn {% if product.id in wishlist_ids %}active{% endif %}" data-product-id="{{ product.id }}" style="padding:0.55rem 0.75rem;background:var(--beige);color:var(--black);border:none;cursor:pointer;border-radius:2px;transition:all 0.2s;"><i class="fas fa-heart"></i></button>
           </div>
           <form action="{{ url_for('buy_now', id=product.id) }}" method="post" style="margin-top:0.4rem">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="qty" value="1">
             <button type="submit" class="card-btn-buynow">Buy Now <i class="fas fa-bolt"></i></button>
           </form>
@@ -237,6 +241,7 @@
   <h2 class="section-title" style="color:var(--cream)">Enter the World<br>of <em style="color:var(--gold-light)">ZÉR</em></h2>
   <p class="section-desc" style="color:var(--beige-dark);margin:0 auto">Subscribe for new arrivals, private sales, and editorial jewellery stories. No noise — only gold.</p>
   <form action="{{ url_for('newsletter') }}" method="post" class="newsletter-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="email" name="email" placeholder="Your email address" required>
     <button type="submit">Subscribe</button>
   </form>

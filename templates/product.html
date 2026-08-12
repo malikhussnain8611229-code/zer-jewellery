@@ -49,6 +49,7 @@
       </ul>
       {% if product.stock > 0 %}
       <form action="{{ url_for('add_to_cart', id=product.id) }}" method="post" class="add-cart-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="qty-control">
           <button type="button" class="qty-btn" data-action="minus">−</button>
           <input type="number" name="qty" value="1" min="1" max="{{ product.stock }}" class="qty-input">
@@ -60,6 +61,7 @@
         </div>
       </form>
       <form action="{{ url_for('buy_now', id=product.id) }}" method="post" style="margin-top:0.75rem">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="qty" value="1">
         <button type="submit" class="card-btn-buynow" style="width:100%;padding:0.9rem;">Buy Now <i class="fas fa-bolt"></i></button>
       </form>
@@ -99,6 +101,7 @@
       <div class="review-form reveal">
         <h4>Share Your Experience</h4>
         <form action="{{ url_for('add_review', product_id=product.id) }}" method="post">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="star-rating" style="flex-direction:row-reverse;justify-content:flex-end">
             {% for i in range(5,0,-1) %}
             <input type="radio" name="rating" id="star{{ i }}" value="{{ i }}" {% if i==5 %}checked{% endif %}>

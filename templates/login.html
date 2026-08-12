@@ -27,6 +27,7 @@
       {% endwith %}
 
       <form class="auth-form" action="{{ url_for('login') }}" method="post">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
           <label class="form-label">Email Address</label>
           <input type="email" name="email" class="form-input" required autofocus>
@@ -40,7 +41,7 @@
       <div class="divider" style="margin:1.5rem 0">or</div>
       <div class="auth-footer">
         <p>Don't have an account? <a href="{{ url_for('register') }}">Create one</a></p>
-        <p style="margin-top:1rem;font-size:0.78rem;color:var(--light-grey)">Admin: admin@zer.com / admin123</p>
+        
       </div>
     </div>
   </div>

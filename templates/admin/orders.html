@@ -1,59 +1,252 @@
 {% extends "admin/base.html" %}
+
 {% block admin_content %}
+
 <h1 class="admin-title">Orders</h1>
+
+<div style="overflow-x:auto;">
+
 <table class="admin-table">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Customer</th>
-      <th>Email</th>
-      <th>Phone</th>
-      <th>Items Ordered</th>
-      <th>Total</th>
-      <th>Payment</th>
-      <th>Address</th>
-      <th>Status</th>
-      <th>Date</th>
-      <th>Update</th>
-    </tr>
-  </thead>
-  <tbody>
+
+    <thead>
+        <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>ZÉR Username</th>
+            <th>Phone</th>
+            <th>Items Ordered</th>
+            <th>Total</th>
+            <th>Payment</th>
+            <th>Shipping Address</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
     {% for order, user in orders %}
-    <tr>
-      <td>#{{ order.id }}</td>
-      <td>{{ order.shipping_name }}</td>
-      <td>{{ user.email }}</td>
-      <td>{{ order.shipping_phone or '—' }}</td>
-      <td>
-        {% if order.items_json %}
-          {% set items = order.items_json | fromjson %}
-          {% for pid, item in items.items() %}
-          <div style="margin-bottom:0.4rem;padding:0.4rem 0.6rem;background:var(--beige);border-radius:4px;font-size:0.78rem;">
-            <strong>{{ item.name }}</strong><br>
-            <span style="color:var(--warm-grey)">Qty: {{ item.qty }} × PKR {{ "{:,.0f}".format(item.price) }}</span>
-          </div>
-          {% endfor %}
-        {% else %}
-          <span style="color:var(--light-grey)">—</span>
-        {% endif %}
-      </td>
-      <td>PKR {{ "{:,.0f}".format(order.total) }}</td>
-      <td>{{ order.payment_method }}</td>
-      <td style="font-size:0.78rem;max-width:150px;">{{ order.shipping_address or '—' }}</td>
-      <td><span class="order-status status-{{ order.status|lower }}">{{ order.status }}</span></td>
-      <td>{{ order.created_at.strftime('%d %b %Y') }}</td>
-      <td>
-        <form action="{{ url_for('update_order_status', id=order.id) }}" method="post" style="display:flex;gap:0.5rem">
-          <select name="status" class="sort-select" style="font-size:0.78rem;padding:0.4rem 1.5rem 0.4rem 0.75rem">
-            {% for status in ['Pending','Confirmed','Shipped','Delivered','Cancelled'] %}
-            <option {% if order.status==status %}selected{% endif %}>{{ status }}</option>
-            {% endfor %}
-          </select>
-          <button type="submit" class="btn-edit"><i class="fas fa-check"></i></button>
-        </form>
-      </td>
-    </tr>
+
+        <tr>
+
+            <!-- ORDER ID -->
+            <td>
+                <strong>#{{ order.id }}</strong>
+            </td>
+
+            <!-- CUSTOMER NAME -->
+            <td>
+                {{ order.shipping_name or user.name }}
+            </td>
+
+            <!-- ZÉR USERNAME -->
+            <td>
+                {{ user.name }}
+            </td>
+
+            <!-- PHONE -->
+            <td>
+                {{ order.shipping_phone or user.phone or '—' }}
+            </td>
+
+            <!-- PRODUCTS ORDERED -->
+            <td style="min-width:220px;">
+
+                {% if order.items_json %}
+
+                    {% set items = order.items_json | fromjson %}
+
+                    {% for pid, item in items.items() %}
+
+                        <div style="
+                            margin-bottom:8px;
+                            padding:9px;
+                            background:var(--beige);
+                            border-radius:5px;
+                        ">
+
+                            <strong>
+                                {{ item.name }}
+                            </strong>
+
+                            <br>
+
+                            <span style="
+                                font-size:0.78rem;
+                                color:var(--warm-grey);
+                            ">
+
+                                Quantity:
+                                <strong>{{ item.qty }}</strong>
+
+                                ×
+
+                                PKR
+                                {{ "{:,.0f}".format(item.price) }}
+
+                            </span>
+
+                            <br>
+
+                            <span style="
+                                font-size:0.75rem;
+                                color:var(--warm-grey);
+                            ">
+
+                                Subtotal:
+                                PKR
+                                {{ "{:,.0f}".format(item.price * item.qty) }}
+
+                            </span>
+
+                        </div>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <span>—</span>
+
+                {% endif %}
+
+            </td>
+
+            <!-- TOTAL -->
+            <td>
+                <strong>
+                    PKR {{ "{:,.0f}".format(order.total) }}
+                </strong>
+            </td>
+
+            <!-- PAYMENT -->
+            <td>
+                {{ order.payment_method or '—' }}
+            </td>
+
+            <!-- ADDRESS -->
+            <td style="max-width:220px;font-size:0.8rem;">
+                {{ order.shipping_address or '—' }}
+            </td>
+
+            <!-- STATUS -->
+            <td>
+
+                <span class="order-status status-{{ order.status|lower }}">
+                    {{ order.status }}
+                </span>
+
+            </td>
+
+            <!-- DATE -->
+            <td>
+
+                {% if order.created_at %}
+                    {{ order.created_at.strftime('%d %b %Y') }}
+                    <br>
+                    <small>
+                        {{ order.created_at.strftime('%I:%M %p') }}
+                    </small>
+                {% else %}
+                    —
+                {% endif %}
+
+            </td>
+
+            <!-- ACTIONS -->
+            <td>
+
+                <form
+                    action="{{ url_for('update_order_status', id=order.id) }}"
+                    method="post"
+                    style="display:flex;gap:5px;margin-bottom:8px;"
+                >
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <select
+                        name="status"
+                        class="sort-select"
+                        style="font-size:0.75rem;"
+                    >
+
+                        {% for status in [
+                            'Pending',
+                            'Confirmed',
+                            'Shipped',
+                            'Delivered',
+                            'Cancelled'
+                        ] %}
+
+                            <option
+                                value="{{ status }}"
+                                {% if order.status == status %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ status }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <button
+                        type="submit"
+                        class="btn-edit"
+                        title="Update Status"
+                    >
+                        <i class="fas fa-check"></i>
+                    </button>
+
+                </form>
+
+                <!-- DELETE ORDER -->
+
+                <form
+                    action="{{ url_for('admin_delete_order', id=order.id) }}"
+                    method="post"
+                    onsubmit="return confirm(
+                        'Delete Order #{{ order.id }}? The ordered stock will be restored.'
+                    );"
+                >
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <button
+                        type="submit"
+                        class="btn-danger"
+                        style="width:100%;"
+                    >
+                        <i class="fas fa-trash"></i>
+                        Delete Order
+                    </button>
+
+                </form>
+
+            </td>
+
+        </tr>
+
+    {% else %}
+
+        <tr>
+
+            <td
+                colspan="11"
+                style="text-align:center;padding:3rem;"
+            >
+
+                No orders have been placed yet.
+
+            </td>
+
+        </tr>
+
     {% endfor %}
-  </tbody>
+
+    </tbody>
+
 </table>
+
+</div>
+
 {% endblock %}

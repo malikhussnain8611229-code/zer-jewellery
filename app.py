@@ -1,16 +1,48 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import json
+import secrets
+import re
+import time
+from urllib.parse import urlparse
+from sqlalchemy import or_, update
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
-app.secret_key = 'zer-luxury-jewellery-secret-2024'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///zer.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+@app.template_filter('fromjson')
+def fromjson_filter(value):
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return {}
+# Never hard-code secrets in source control. Set SECRET_KEY in the deployment environment.
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    if os.environ.get('FLASK_ENV', '').lower() == 'production':
+        raise RuntimeError('SECRET_KEY must be set in production.')
+    _secret_key = secrets.token_hex(32)
+
+app.config.update(
+    SECRET_KEY=_secret_key,
+    SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URL', 'sqlite:///zer.db').replace('postgres://', 'postgresql://', 1),
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=os.environ.get('SESSION_COOKIE_SECURE', '1' if os.environ.get('FLASK_ENV', '').lower() == 'production' else '0') != '0',
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+    MAX_CONTENT_LENGTH=2 * 1024 * 1024,
+)
 
 db = SQLAlchemy(app)
+
+# Small in-process login throttle; put a reverse proxy/WAF rate limit in front for multi-worker deployments.
+_login_failures = {}
+LOGIN_WINDOW = 10 * 60
+LOGIN_LIMIT = 8
 
 # ─── Models ───────────────────────────────────────────────────────────────────
 
@@ -88,46 +120,145 @@ class ContactMessage(db.Model):
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
+def _safe_int(value, default=1, minimum=1, maximum=99):
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(maximum, value))
+
+
 def get_cart():
-    return session.get('cart', {})
+    # Cart stores only product IDs and quantities. Never trust prices from the browser.
+    raw = session.get('cart', {})
+    if not isinstance(raw, dict):
+        return {}
+    clean = {}
+    for pid, item in raw.items():
+        try:
+            product_id = int(pid)
+            qty = _safe_int(item.get('qty', 1) if isinstance(item, dict) else 1)
+            clean[str(product_id)] = {'qty': qty}
+        except (TypeError, ValueError):
+            continue
+    return clean
+
+
+def save_cart(cart):
+    session['cart'] = {str(pid): {'qty': _safe_int(item.get('qty', 1))}
+                       for pid, item in cart.items()}
+
 
 def cart_count():
-    cart = get_cart()
-    return sum(item['qty'] for item in cart.values())
+    return sum(item['qty'] for item in get_cart().values())
+
+
+def cart_items():
+    items = []
+    for pid, item in get_cart().items():
+        product = db.session.get(Product, int(pid))
+        if product:
+            qty = min(item['qty'], max(product.stock, 0))
+            if qty > 0:
+                items.append({'product': product, 'qty': qty,
+                              'subtotal': product.price * qty})
+    return items
+
 
 def cart_total():
-    cart = get_cart()
-    return sum(item['price'] * item['qty'] for item in cart.values())
+    return sum(item['subtotal'] for item in cart_items())
+
 
 def get_wishlist_ids():
     uid = session.get('user_id')
     if uid:
         items = Wishlist.query.filter_by(user_id=uid).all()
         return [w.product_id for w in items]
-    return session.get('wishlist', [])
+    return []
+
 
 def get_admin_counts():
     pending_orders = Order.query.filter_by(status='Confirmed').count()
     new_messages = ContactMessage.query.filter_by(is_read=False).count()
     return pending_orders, new_messages
-import json as json_module
 
-@app.template_filter('fromjson')
-def fromjson_filter(value):
-    try:
-        return json_module.loads(value)
-    except:
-        return {}
+
+def valid_email(value):
+    return bool(re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', (value or '').strip()))
+
+
+def safe_next_url(value):
+    if not value:
+        return None
+    parsed = urlparse(value)
+    if parsed.scheme or parsed.netloc:
+        return None
+    return value if value.startswith('/') else None
+
+
+def login_throttled(key):
+    now = time.monotonic()
+    failures = [t for t in _login_failures.get(key, []) if now - t < LOGIN_WINDOW]
+    _login_failures[key] = failures
+    return len(failures) >= LOGIN_LIMIT
+
+
+def record_login_failure(key):
+    now = time.monotonic()
+    failures = [t for t in _login_failures.get(key, []) if now - t < LOGIN_WINDOW]
+    failures.append(now)
+    _login_failures[key] = failures
+
+
 @app.context_processor
 def inject_globals():
     uid = session.get('user_id')
-    current_user = User.query.get(uid) if uid else None
+    current_user = db.session.get(User, uid) if uid else None
     return dict(
         cart_count=cart_count(),
         wishlist_ids=get_wishlist_ids(),
         current_user=current_user,
+        csrf_token=csrf_token,
         categories=['Earrings','Necklaces','Rings','Bracelets','Anklets','Nose Pins']
     )
+
+
+def csrf_token():
+    token = session.get('_csrf_token')
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session['_csrf_token'] = token
+    return token
+
+
+@app.before_request
+def protect_state_changing_requests():
+    if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+        expected = session.get('_csrf_token')
+        supplied = request.form.get('csrf_token') or request.headers.get('X-CSRF-Token')
+        if not expected or not supplied or not secrets.compare_digest(expected, supplied):
+            if request.path.startswith('/wishlist/'):
+                return jsonify({'status': 'csrf_error'}), 400
+            flash('Your session expired. Please try again.', 'error')
+            return redirect(safe_next_url(request.referrer) or url_for('home'))
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; "
+        "form-action 'self'; img-src 'self' data: https://images.unsplash.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self'"
+    )
+    if request.is_secure:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
@@ -141,7 +272,7 @@ def home():
 @app.route('/shop')
 def shop():
     category = request.args.get('category', '')
-    search = request.args.get('search', '')
+    search = request.args.get('search', '')[:100]
     sort = request.args.get('sort', 'newest')
     page = request.args.get('page', 1, type=int)
 
@@ -178,66 +309,73 @@ def product_detail(id):
 
 @app.route('/cart')
 def cart():
-    cart_data = get_cart()
-    items = []
-    for pid, item in cart_data.items():
-        product = Product.query.get(int(pid))
-        if product:
-            items.append({'product': product, 'qty': item['qty'], 'subtotal': item['price']*item['qty']})
-    return render_template('cart.html', items=items, total=cart_total())
+    items = cart_items()
+    total = sum(item['subtotal'] for item in items)
+    return render_template('cart.html', items=items, total=total)
+
 
 @app.route('/add_to_cart/<int:id>', methods=['POST'])
 def add_to_cart(id):
     product = Product.query.get_or_404(id)
-    qty = int(request.form.get('qty', 1))
+    if product.stock <= 0:
+        flash('This product is currently sold out.', 'error')
+        return redirect(safe_next_url(request.referrer) or url_for('shop'))
+
+    qty = _safe_int(request.form.get('qty', 1), maximum=99)
     cart = get_cart()
     pid = str(id)
-    if pid in cart:
-        cart[pid]['qty'] += qty
-    else:
-        cart[pid] = {'name': product.name, 'price': product.price, 'qty': qty, 'image': product.image_url}
-    session['cart'] = cart
+    existing_qty = cart.get(pid, {}).get('qty', 0)
+    new_qty = min(existing_qty + qty, product.stock, 99)
+    cart[pid] = {'qty': new_qty}
+    save_cart(cart)
     flash(f'"{product.name}" added to cart!', 'success')
-    return redirect(request.referrer or url_for('shop'))
+    return redirect(safe_next_url(request.referrer) or url_for('shop'))
+
 
 @app.route('/buy_now/<int:id>', methods=['POST'])
 def buy_now(id):
     product = Product.query.get_or_404(id)
-    qty = int(request.form.get('qty', 1))
+    if product.stock <= 0:
+        flash('This product is currently sold out.', 'error')
+        return redirect(url_for('product_detail', id=id))
+    qty = min(_safe_int(request.form.get('qty', 1), maximum=99), product.stock)
     cart = get_cart()
-    pid = str(id)
-    if pid in cart:
-        cart[pid]['qty'] += qty
-    else:
-        cart[pid] = {'name': product.name, 'price': product.price, 'qty': qty, 'image': product.image_url}
-    session['cart'] = cart
+    cart[str(id)] = {'qty': qty}
+    save_cart(cart)
     return redirect(url_for('checkout'))
 
-@app.route('/remove_from_cart/<int:id>')
+
+@app.route('/remove_from_cart/<int:id>', methods=['POST'])
 def remove_from_cart(id):
     cart = get_cart()
-    if str(id) in cart:
-        del cart[str(id)]
-    session['cart'] = cart
+    cart.pop(str(id), None)
+    save_cart(cart)
     return redirect(url_for('cart'))
+
 
 @app.route('/update_cart/<int:id>', methods=['POST'])
 def update_cart(id):
     cart = get_cart()
-    qty = int(request.form.get('qty', 1))
-    if qty < 1:
+    if str(id) not in cart:
+        return redirect(url_for('cart'))
+    product = Product.query.get_or_404(id)
+    qty = _safe_int(request.form.get('qty', 1), maximum=99)
+    if product.stock <= 0:
         cart.pop(str(id), None)
+        flash(f'"{product.name}" is sold out and was removed from your cart.', 'error')
     else:
-        if str(id) in cart:
-            cart[str(id)]['qty'] = qty
-    session['cart'] = cart
+        cart[str(id)] = {'qty': min(qty, product.stock)}
+    save_cart(cart)
     return redirect(url_for('cart'))
+
 
 @app.route('/wishlist/toggle/<int:id>', methods=['POST'])
 def toggle_wishlist(id):
     uid = session.get('user_id')
     if not uid:
         return jsonify({'status': 'login_required'})
+    if not Product.query.get(id):
+        return jsonify({'status': 'not_found'}), 404
     existing = Wishlist.query.filter_by(user_id=uid, product_id=id).first()
     if existing:
         db.session.delete(existing)
@@ -254,86 +392,84 @@ def checkout():
         flash('Please log in to checkout.', 'warning')
         return redirect(url_for('login'))
 
-    cart_data = get_cart()
-
-    if not cart_data:
+    items = cart_items()
+    if not items:
         return redirect(url_for('cart'))
 
-    if request.method == 'POST':
+    subtotal = sum(item['subtotal'] for item in items)
 
-        if cart_total() < 500:
-            flash(
-                'Minimum order amount is PKR 500 (excluding delivery). Please add more items to proceed.',
-                'error'
-            )
+    if request.method == 'POST':
+        if subtotal < 500:
+            flash('Minimum order amount is PKR 500 (excluding delivery). Please add more items.', 'error')
             return redirect(url_for('checkout'))
 
-        # Check stock BEFORE creating the order
-        for pid, item in cart_data.items():
-            product = Product.query.get(int(pid))
+        name = request.form.get('name', '').strip()
+        address = request.form.get('address', '').strip()
+        city = request.form.get('city', '').strip()
+        postal = request.form.get('postal', '').strip()
+        phone = request.form.get('phone', '').strip()
+        payment = request.form.get('payment', '').strip()
 
-            if not product:
-                flash(
-                    'One of the products in your cart is no longer available.',
-                    'error'
+        if not name or len(name) > 100 or not address or len(address) > 1000 or not city or len(city) > 100 or len(postal) > 20:
+            flash('Please enter valid shipping details.', 'error')
+            return redirect(url_for('checkout'))
+        if not phone or len(phone) > 20:
+            flash('Please enter a valid phone number.', 'error')
+            return redirect(url_for('checkout'))
+        if payment != 'Cash on Delivery':
+            flash('Invalid payment method.', 'error')
+            return redirect(url_for('checkout'))
+
+        shipping_address = f"{address}, {city}" + (f", {postal}" if postal else '')
+
+        # Re-read products and reserve stock atomically before creating the order.
+        order_items = {}
+        try:
+            for item in items:
+                product = db.session.get(Product, item['product'].id)
+                qty = item['qty']
+                if not product or product.stock < qty:
+                    raise ValueError(f'Sorry, "{item["product"].name}" does not have enough stock.')
+
+                result = db.session.execute(
+                    update(Product)
+                    .where(Product.id == product.id, Product.stock >= qty)
+                    .values(stock=Product.stock - qty)
                 )
-                return redirect(url_for('cart'))
+                if result.rowcount != 1:
+                    raise ValueError(f'Sorry, "{product.name}" just sold out. Please review your cart.')
 
-            if product.stock < item['qty']:
-                flash(
-                    f'Sorry, only {product.stock} unit(s) of "{product.name}" are available.',
-                    'error'
-                )
-                return redirect(url_for('cart'))
+                order_items[str(product.id)] = {
+                    'name': product.name,
+                    'price': product.price,
+                    'qty': qty,
+                    'image': product.image_url,
+                }
 
-        # All stock checks passed — create the order
-        order = Order(
-            user_id=session['user_id'],
-            total=cart_total() + 200,
-            shipping_name=request.form.get('name'),
-            shipping_address=request.form.get('address'),
-            shipping_phone=request.form.get('phone'),
-            payment_method=request.form.get('payment'),
-            items_json=json.dumps(cart_data),
-            status='Confirmed'
-        )
-
-        db.session.add(order)
-
-        # Reduce stock
-        for pid, item in cart_data.items():
-            product = Product.query.get(int(pid))
-            product.stock -= item['qty']
-
-        db.session.commit()
+            # Recalculate from authoritative DB prices, not session values.
+            authoritative_total = sum(v['price'] * v['qty'] for v in order_items.values())
+            order = Order(
+                user_id=session['user_id'],
+                total=authoritative_total + 200,
+                shipping_name=name,
+                shipping_address=shipping_address,
+                shipping_phone=phone,
+                payment_method=payment,
+                items_json=json.dumps(order_items),
+                status='Confirmed'
+            )
+            db.session.add(order)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            flash(str(exc) if isinstance(exc, ValueError) else 'We could not place your order. Please try again.', 'error')
+            return redirect(url_for('cart'))
 
         session['cart'] = {}
-
-        flash(
-            'Order placed successfully! Thank you for shopping with ZER.',
-            'success'
-        )
-
+        flash('Order placed successfully! Thank you for shopping with ZER.', 'success')
         return redirect(url_for('order_confirmed', id=order.id))
 
-    # Prepare cart items for the checkout page
-    items = []
-
-    for pid, item in cart_data.items():
-        product = Product.query.get(int(pid))
-
-        if product:
-            items.append({
-                'product': product,
-                'qty': item['qty'],
-                'subtotal': item['price'] * item['qty']
-            })
-
-    return render_template(
-        'checkout.html',
-        items=items,
-        total=cart_total()
-    )
+    return render_template('checkout.html', items=items, total=subtotal)
 
 
 @app.route('/order-confirmed/<int:id>')
@@ -353,78 +489,88 @@ def order_confirmed(id):
     )
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # If user is already logged in, redirect based on role
     if 'user_id' in session:
-        if session.get('is_admin'):
-            return redirect(url_for('admin_dashboard'))
-
-        return redirect(url_for('home'))
+        return redirect(url_for('admin_dashboard' if session.get('is_admin') else 'home'))
 
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
+        email = email[:120]
+        key = f"{request.remote_addr or 'unknown'}:{email}"
+        if login_throttled(key):
+            flash('Too many failed attempts. Please wait a few minutes and try again.', 'error')
+            return render_template('login.html'), 429
 
         user = User.query.filter_by(email=email).first()
 
-        password_field = (
-            getattr(user, 'password_hash', getattr(user, 'password', None))
-            if user else None
-        )
-
-        if user and password_field and check_password_hash(
-            password_field,
-            password
-        ):
+        if user and check_password_hash(user.password, password):
+            session.clear()
             session['user_id'] = user.id
-            session['is_admin'] = user.is_admin
-
+            session['is_admin'] = bool(user.is_admin)
+            session.permanent = True
             flash('Welcome back!', 'success')
+            return redirect(url_for('admin_dashboard' if user.is_admin else 'home'))
 
-            if user.is_admin:
-                return redirect(url_for('admin_dashboard'))
-
-            return redirect(url_for('home'))
-
-        else:
-            flash('Invalid email or password.', 'error')
+        record_login_failure(key)
+        flash('Invalid email or password.', 'error')
 
     return render_template('login.html')
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        phone = request.form.get('phone')
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        phone = request.form.get('phone', '').strip()
+
+        if not name or len(name) > 100:
+            flash('Please enter a valid name.', 'error')
+            return redirect(url_for('register'))
+        if not valid_email(email) or len(email) > 120:
+            flash('Please enter a valid email address.', 'error')
+            return redirect(url_for('register'))
+        if len(password) < 8 or len(password) > 128:
+            flash('Password must be between 8 and 128 characters.', 'error')
+            return redirect(url_for('register'))
+        if len(phone) > 20:
+            flash('Please enter a valid phone number.', 'error')
+            return redirect(url_for('register'))
 
         if User.query.filter_by(email=email).first():
             flash('Email already registered.', 'error')
             return redirect(url_for('register'))
 
-        user = User(
-            name=name,
-            email=email,
-            password=generate_password_hash(password),
-            phone=phone
-        )
+        user = User(name=name, email=email, password=generate_password_hash(password), phone=phone)
         db.session.add(user)
         db.session.commit()
 
+        session.clear()
         session['user_id'] = user.id
-        session['is_admin'] = user.is_admin
+        session['is_admin'] = False
+        session.permanent = True
         flash('Account created successfully!', 'success')
         return redirect(url_for('dashboard'))
 
     return render_template('register.html')
 
-@app.route('/logout')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    # Keep the old /signup URL working; use the same hardened registration flow.
+    return register()
+
+
+@app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('home'))
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -442,9 +588,15 @@ def update_profile():
     if not uid:
         return redirect(url_for('login'))
     user = User.query.get(uid)
-    user.name = request.form.get('name', user.name)
-    user.phone = request.form.get('phone', user.phone)
-    user.address = request.form.get('address', user.address)
+    name = request.form.get('name', user.name).strip()
+    phone = request.form.get('phone', user.phone or '').strip()
+    address = request.form.get('address', user.address or '').strip()
+    if not name or len(name) > 100 or len(phone) > 20 or len(address) > 1000:
+        flash('Please enter valid profile details.', 'error')
+        return redirect(url_for('dashboard'))
+    user.name = name
+    user.phone = phone
+    user.address = address
     db.session.commit()
     flash('Profile updated successfully!', 'success')
     return redirect(url_for('dashboard'))
@@ -455,6 +607,8 @@ def add_review(product_id):
     if not uid:
         flash('Please log in to leave a review.', 'warning')
         return redirect(url_for('login'))
+    if not Product.query.get(product_id):
+        return redirect(url_for('shop'))
     existing = Review.query.filter_by(user_id=uid, product_id=product_id).first()
     if existing:
         flash('You have already reviewed this product.', 'info')
@@ -462,8 +616,8 @@ def add_review(product_id):
     review = Review(
         user_id=uid,
         product_id=product_id,
-        rating=int(request.form.get('rating', 5)),
-        comment=request.form.get('comment', '')
+        rating=max(1, min(5, _safe_int(request.form.get('rating', 5), default=5, maximum=5))),
+        comment=request.form.get('comment', '').strip()[:2000]
     )
     db.session.add(review)
     db.session.commit()
@@ -477,12 +631,14 @@ def about():
 @app.route('/contact', methods=['GET','POST'])
 def contact():
     if request.method == 'POST':
-        msg = ContactMessage(
-            name=request.form.get('name'),
-            email=request.form.get('email'),
-            subject=request.form.get('subject'),
-            message=request.form.get('message')
-        )
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        subject = request.form.get('subject', '').strip()
+        message = request.form.get('message', '').strip()
+        if not name or len(name) > 100 or not valid_email(email) or len(subject) > 200 or not message or len(message) > 5000:
+            flash('Please enter valid contact details.', 'error')
+            return redirect(url_for('contact'))
+        msg = ContactMessage(name=name, email=email, subject=subject, message=message)
         db.session.add(msg)
         db.session.commit()
         flash('Your message has been sent. We will get back to you shortly.', 'success')
@@ -491,8 +647,8 @@ def contact():
 
 @app.route('/newsletter', methods=['POST'])
 def newsletter():
-    email = request.form.get('email')
-    if email:
+    email = request.form.get('email', '').strip().lower()
+    if email and valid_email(email) and len(email) <= 120:
         existing = Newsletter.query.filter_by(email=email).first()
         if not existing:
             n = Newsletter(email=email)
@@ -540,49 +696,75 @@ def admin_products():
 @admin_required
 def admin_add_product():
     if request.method == 'POST':
+        try:
+            name = request.form.get('name', '').strip()
+            price = float(request.form.get('price', '0'))
+            original = float(request.form.get('original_price') or 0)
+            stock = int(request.form.get('stock', '0'))
+        except (TypeError, ValueError):
+            flash('Invalid product number.', 'error')
+            return redirect(url_for('admin_add_product'))
+
+        if not name or len(name) > 200 or price <= 0 or original < 0 or stock < 0:
+            flash('Please enter valid product details.', 'error')
+            return redirect(url_for('admin_add_product'))
+
         p = Product(
-            name=request.form.get('name'),
-            description=request.form.get('description'),
-            price=float(request.form.get('price')),
-            original_price=float(request.form.get('original_price') or 0) or None,
-            category=request.form.get('category'),
-            image_url=request.form.get('image_url'),
-            stock=int(request.form.get('stock', 10)),
-            material=request.form.get('material'),
-            weight=request.form.get('weight'),
+            name=name,
+            description=request.form.get('description', '').strip()[:10000],
+            price=price,
+            original_price=original or None,
+            category=request.form.get('category', '').strip()[:50],
+            image_url=request.form.get('image_url', '').strip()[:300],
+            stock=min(stock, 100000),
+            material=request.form.get('material', '').strip()[:100],
+            weight=request.form.get('weight', '').strip()[:50],
             is_featured='is_featured' in request.form,
             is_trending='is_trending' in request.form,
-            image_url_2=request.form.get('image_url_2'),
-            image_url_3=request.form.get('image_url_3'),
-            image_url_4=request.form.get('image_url_4'),
+            image_url_2=request.form.get('image_url_2', '').strip()[:300],
+            image_url_3=request.form.get('image_url_3', '').strip()[:300],
+            image_url_4=request.form.get('image_url_4', '').strip()[:300],
         )
         db.session.add(p)
         db.session.commit()
         flash('Product added!', 'success')
         return redirect(url_for('admin_products'))
     pending_orders, new_messages = get_admin_counts()
-    return render_template('admin/add_product.html',
-                           pending_orders=pending_orders, new_messages=new_messages)
+    return render_template('admin/add_product.html', pending_orders=pending_orders, new_messages=new_messages)
+
 
 @app.route('/admin/product/edit/<int:id>', methods=['GET','POST'])
 @admin_required
 def admin_edit_product(id):
     p = Product.query.get_or_404(id)
     if request.method == 'POST':
-        p.name = request.form.get('name')
-        p.description = request.form.get('description')
-        p.price = float(request.form.get('price'))
-        p.original_price = float(request.form.get('original_price') or 0) or None
-        p.category = request.form.get('category')
-        p.image_url = request.form.get('image_url')
-        p.stock = int(request.form.get('stock', 10))
-        p.material = request.form.get('material')
-        p.weight = request.form.get('weight')
+        try:
+            price = float(request.form.get('price', '0'))
+            original = float(request.form.get('original_price') or 0)
+            stock = int(request.form.get('stock', '0'))
+        except (TypeError, ValueError):
+            flash('Invalid product number.', 'error')
+            return redirect(url_for('admin_edit_product', id=id))
+
+        name = request.form.get('name', '').strip()
+        if not name or len(name) > 200 or price <= 0 or original < 0 or stock < 0:
+            flash('Please enter valid product details.', 'error')
+            return redirect(url_for('admin_edit_product', id=id))
+
+        p.name = name
+        p.description = request.form.get('description', '').strip()[:10000]
+        p.price = price
+        p.original_price = original or None
+        p.category = request.form.get('category', '').strip()[:50]
+        p.image_url = request.form.get('image_url', '').strip()[:300]
+        p.stock = min(stock, 100000)
+        p.material = request.form.get('material', '').strip()[:100]
+        p.weight = request.form.get('weight', '').strip()[:50]
         p.is_featured = 'is_featured' in request.form
         p.is_trending = 'is_trending' in request.form
-        p.image_url_2 = request.form.get('image_url_2')
-        p.image_url_3 = request.form.get('image_url_3')
-        p.image_url_4 = request.form.get('image_url_4')
+        p.image_url_2 = request.form.get('image_url_2', '').strip()[:300]
+        p.image_url_3 = request.form.get('image_url_3', '').strip()[:300]
+        p.image_url_4 = request.form.get('image_url_4', '').strip()[:300]
         db.session.commit()
         flash('Product updated!', 'success')
         return redirect(url_for('admin_products'))
@@ -590,7 +772,8 @@ def admin_edit_product(id):
     return render_template('admin/add_product.html', product=p,
                            pending_orders=pending_orders, new_messages=new_messages)
 
-@app.route('/admin/product/delete/<int:id>')
+
+@app.route('/admin/product/delete/<int:id>', methods=['POST'])
 @admin_required
 def admin_delete_product(id):
     p = Product.query.get_or_404(id)
@@ -694,16 +877,31 @@ def seed_data():
         )
         db.session.add(product)
 
-    if not User.query.filter_by(email='admin@zer.com').first():
-        admin = User(name='ZÉR Admin', email='admin@zer.com',
-                     password=generate_password_hash('ijazMalik5046564'), is_admin=True)
-        db.session.add(admin)
-
     db.session.commit()
+
+
+def ensure_admin_account():
+    # An admin is created/rotated only when explicit deployment credentials are supplied.
+    email = os.environ.get('ADMIN_EMAIL', '').strip().lower()
+    password = os.environ.get('ADMIN_PASSWORD', '')
+    if not email or not password:
+        return
+    if not valid_email(email) or len(password) < 12:
+        raise RuntimeError('ADMIN_EMAIL must be valid and ADMIN_PASSWORD must be at least 12 characters.')
+
+    admin = User.query.filter_by(email=email).first()
+    if not admin:
+        admin = User(name='ZÉR Admin', email=email, password='', is_admin=True)
+        db.session.add(admin)
+    admin.is_admin = True
+    admin.password = generate_password_hash(password)
+    db.session.commit()
+
 
 with app.app_context():
     db.create_all()
     seed_data()
+    ensure_admin_account()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

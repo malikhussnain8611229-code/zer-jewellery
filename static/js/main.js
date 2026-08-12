@@ -133,9 +133,13 @@ document.querySelectorAll('.wishlist-btn').forEach(btn => {
   btn.addEventListener('click', async (e) => {
     e.preventDefault();
     const productId = btn.dataset.productId;
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     try {
-      const resp = await fetch(`/wishlist/toggle/${productId}`, { method: 'POST' });
+      const resp = await fetch(`/wishlist/toggle/${productId}`, {
+        method: 'POST',
+        headers: {'X-CSRF-Token': csrf, 'Accept': 'application/json'}
+      });
       const data = await resp.json();
 
       if (data.status === 'added') {

@@ -70,12 +70,14 @@
           {% if product.stock > 0 %}
           <div style="display:flex;gap:0.4rem;margin-top:0.75rem">
             <form action="{{ url_for('add_to_cart', id=product.id) }}" method="post" style="flex:1">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="qty" value="1">
               <button type="submit" class="card-btn-dark">Add to Cart</button>
             </form>
             <button class="wishlist-btn {% if product.id in wishlist_ids %}active{% endif %}" data-product-id="{{ product.id }}" style="padding:0.55rem 0.75rem;background:var(--beige);color:var(--black);border:none;cursor:pointer;border-radius:2px;transition:all 0.2s;{% if product.id in wishlist_ids %}background:var(--gold);color:white;{% endif %}"><i class="fas fa-heart"></i></button>
           </div>
           <form action="{{ url_for('buy_now', id=product.id) }}" method="post" style="margin-top:0.4rem">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="qty" value="1">
             <button type="submit" class="card-btn-buynow">Buy Now <i class="fas fa-bolt"></i></button>
           </form>

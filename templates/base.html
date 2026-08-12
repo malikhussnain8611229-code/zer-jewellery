@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <title>{% block title %}ZÉR Jewellery — Luxury Redefined{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,7 +68,10 @@
           <span class="user-name">{{ current_user.name }}</span>
           <a href="{{ url_for('dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
           {% if current_user.is_admin %}<a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-cog"></i> Admin</a>{% endif %}
-          <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          <form action="{{ url_for('logout') }}" method="post" style="display:inline">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer"><i class="fas fa-sign-out-alt"></i> Logout</button>
+          </form>
         </div>
       </div>
       {% else %}
@@ -124,6 +128,7 @@
       <h4>Stay in the world of ZÉR</h4>
       <p>Receive new arrivals, editorials, and exclusive offers.</p>
       <form action="{{ url_for('newsletter') }}" method="post" class="footer-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="email" name="email" placeholder="Your email address" required>
         <button type="submit">Subscribe</button>
       </form>

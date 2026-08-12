@@ -74,6 +74,7 @@
   <h2 class="section-title" style="color:var(--cream)">Join the <em style="color:var(--gold-light)">ZÉR</em> Family</h2>
   <p class="section-desc" style="color:var(--beige-dark);margin:0 auto">Be the first to know about new collections, private events, and the stories behind our craft.</p>
   <form action="{{ url_for('newsletter') }}" method="post" class="newsletter-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="email" name="email" placeholder="Your email address" required>
     <button type="submit">Subscribe</button>
   </form>

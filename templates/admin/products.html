@@ -19,7 +19,10 @@
       <td>{% if p.is_featured %}<span style="color:var(--gold)">★</span>{% else %}—{% endif %}</td>
       <td class="admin-actions">
         <a href="{{ url_for('admin_edit_product', id=p.id) }}" class="btn-edit"><i class="fas fa-edit"></i> Edit</a>
-        <a href="{{ url_for('admin_delete_product', id=p.id) }}" class="btn-danger confirm-delete"><i class="fas fa-trash"></i> Delete</a>
+        <form action="{{ url_for('admin_delete_product', id=p.id) }}" method="post" style="display:inline">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="btn-danger confirm-delete" onclick="return confirm('Delete this product?')"><i class="fas fa-trash"></i> Delete</button>
+</form>
       </td>
     </tr>
     {% endfor %}
