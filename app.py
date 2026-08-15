@@ -547,13 +547,13 @@ def register():
 
         user = User(name=name, email=email, password=generate_password_hash(password), phone=phone)
         try:
-    db.session.add(user)
-    db.session.commit()
-except Exception as e:
-    db.session.rollback()
-    print("REGISTER ERROR:", e)
-    flash(str(e), "error")
-    return redirect(url_for('register'))
+            db.session.add(user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print("REGISTER ERROR:", e)
+            flash(str(e), "error")
+            return redirect(url_for('register'))
 
 session.clear()
 session['user_id'] = user.id
