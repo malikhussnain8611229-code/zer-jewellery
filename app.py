@@ -555,12 +555,13 @@ except Exception as e:
     flash(str(e), "error")
     return redirect(url_for('register'))
 
-        session.clear()
-        session['user_id'] = user.id
-        session['is_admin'] = False
-        session.permanent = True
-        flash('Account created successfully!', 'success')
-        return redirect(url_for('dashboard'))
+session.clear()
+session['user_id'] = user.id
+session['is_admin'] = False
+session.permanent = True
+
+flash('Account created successfully!', 'success')
+return redirect(url_for('dashboard'))
 
     return render_template('register.html')
 
