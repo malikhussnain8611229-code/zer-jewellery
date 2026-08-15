@@ -545,7 +545,7 @@ def register():
             flash('Email already registered.', 'error')
             return redirect(url_for('register'))
 
-               user = User(
+        user = User(
             name=name,
             email=email,
             password=generate_password_hash(password),
