@@ -531,12 +531,15 @@ def register():
         if not name or len(name) > 100:
             flash('Please enter a valid name.', 'error')
             return redirect(url_for('register'))
+
         if not valid_email(email) or len(email) > 120:
             flash('Please enter a valid email address.', 'error')
             return redirect(url_for('register'))
+
         if len(password) < 8 or len(password) > 128:
             flash('Password must be between 8 and 128 characters.', 'error')
             return redirect(url_for('register'))
+
         if len(phone) > 20:
             flash('Please enter a valid phone number.', 'error')
             return redirect(url_for('register'))
@@ -569,6 +572,7 @@ def register():
         flash('Account created successfully!', 'success')
         return redirect(url_for('dashboard'))
 
+    return render_template('register.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
