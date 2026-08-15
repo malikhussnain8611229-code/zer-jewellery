@@ -545,7 +545,13 @@ def register():
             flash('Email already registered.', 'error')
             return redirect(url_for('register'))
 
-        user = User(name=name, email=email, password=generate_password_hash(password), phone=phone)
+               user = User(
+            name=name,
+            email=email,
+            password=generate_password_hash(password),
+            phone=phone
+        )
+
         try:
             db.session.add(user)
             db.session.commit()
@@ -555,15 +561,13 @@ def register():
             flash(str(e), "error")
             return redirect(url_for('register'))
 
-session.clear()
-session['user_id'] = user.id
-session['is_admin'] = False
-session.permanent = True
+        session.clear()
+        session['user_id'] = user.id
+        session['is_admin'] = False
+        session.permanent = True
 
-flash('Account created successfully!', 'success')
-return redirect(url_for('dashboard'))
-
-    return render_template('register.html')
+        flash('Account created successfully!', 'success')
+        return redirect(url_for('dashboard'))
 
 
 @app.route('/signup', methods=['GET', 'POST'])
