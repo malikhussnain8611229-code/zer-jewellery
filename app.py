@@ -528,23 +528,34 @@ def register():
         password = request.form.get('password', '')
         phone = request.form.get('phone', '').strip()
 
+        print("REGISTER ATTEMPT")
+        print("Name:", name)
+        print("Email:", email)
+        print("Phone:", phone)
+
         if not name or len(name) > 100:
+            print("FAILED: NAME")
             flash('Please enter a valid name.', 'error')
             return redirect(url_for('register'))
 
         if not valid_email(email) or len(email) > 120:
+            print("FAILED: EMAIL")
             flash('Please enter a valid email address.', 'error')
             return redirect(url_for('register'))
 
         if len(password) < 8 or len(password) > 128:
+            print("FAILED: PASSWORD")
             flash('Password must be between 8 and 128 characters.', 'error')
             return redirect(url_for('register'))
 
         if len(phone) > 20:
+            print("FAILED: PHONE")
             flash('Please enter a valid phone number.', 'error')
             return redirect(url_for('register'))
 
-        if User.query.filter_by(email=email).first():
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            print("FAILED: EMAIL EXISTS")
             flash('Email already registered.', 'error')
             return redirect(url_for('register'))
 
@@ -558,10 +569,14 @@ def register():
         try:
             db.session.add(user)
             db.session.commit()
+
+            print("USER CREATED SUCCESSFULLY")
+            print("NEW USER ID:", user.id)
+
         except Exception as e:
             db.session.rollback()
-            print("REGISTER ERROR:", e)
-            flash(str(e), "error")
+            print("REGISTER ERROR:", str(e))
+            flash(str(e), 'error')
             return redirect(url_for('register'))
 
         session.clear()
